@@ -32,10 +32,10 @@ suspend fun updateVideoList() {
 
             header("Cookie", States.cookie)
         }.body<JsonObject>()
-        println(body)
+        logOut(body)
         body.Object("data").Array("dataList").filter { it.StringOrNull("isOpen") != null }
     }?.onFailure {
-        it.printStackTrace()
+        logOut(it.stackTraceToString())
     }?.getOrNull()?.runCatching {
         States.videos.clear()
         States.videos.addAll(map {
@@ -58,24 +58,24 @@ suspend fun updateVideoList() {
                 put("id", it.String("id"))
             }
         })
-        println(States.videos)
+        logOut(States.videos)
     }?.onFailure {
-        it.printStackTrace()
+        logOut(it.stackTraceToString())
     }
 }
 
 suspend fun updateLessonList() {
     runCatching {
-        println("updateLessonList")
+        logOut("updateLessonList")
         val body = client.get("https://ilearntec.jlu.edu.cn/studycenter/platform/classroom/myClassroom") {
             header("Cookie", States.cookie)
             parameter("termYear", States.currentTerm.substringAfter('-').substringBefore('-'))
             parameter("term", States.currentTerm.substringAfterLast('-'))
         }.body<JsonObject>()
-        println(body)
+        logOut(body)
         body
     }?.onFailure {
-        it.printStackTrace()
+        logOut(it.stackTraceToString())
     }?.getOrNull()?.runCatching {
         Object("data").Array("dataList")
     }?.onSuccess {
@@ -98,7 +98,7 @@ fun MainPage() {
                 filter1Content = States.lessons,
                 setFilter1 = {
                     States.lessonNow = ((it.String("courseName") + it.String("teacherName")))
-                    println(it)
+                    logOut(it)
                     States.queryType = 0
                     States.queryVideos = listOf(
                         "termId" to States.currentTerm,
@@ -116,7 +116,7 @@ fun MainPage() {
                     States.currentTerm = it.String("id")
                     States.queryVideos = listOf("termYear" to it.String("year"), "term" to it.String("num"))
                     mainScope.launch { updateLessonList() }
-                    println(it)
+                    logOut(it)
                 },
                 current2 = States.termNow,
                 fnIcon = when (States.pageState) {
@@ -128,7 +128,7 @@ fun MainPage() {
                     PageState.SETTINGS -> "Back"
                 },
                 onFnClick = {
-                    println(States.pageState)
+                    logOut(States.pageState)
                     when (States.pageState) {
                         PageState.INDEX -> States.pageState = PageState.SETTINGS
                         PageState.SETTINGS -> States.pageState = PageState.INDEX
@@ -234,14 +234,14 @@ private fun syncCourses(mainScope: CoroutineScope) {
             }
             body
         }.onFailure {
-            it.printStackTrace()
+            logOut(it.stackTraceToString())
         }.getOrNull()?.runCatching {
             States.terms.clear()
             States.terms.addAll(Object("data").ObjectArray("dataList"))
 
             if (States.currentTerm.isEmpty()) {
                 Object("data").Array("dataList").first().let {
-                    println(it)
+                    logOut(it)
                     States.currentTerm = it.String("id")
                     States.termNow = it.String("year") + it.String("name")
                 }
@@ -249,14 +249,14 @@ private fun syncCourses(mainScope: CoroutineScope) {
             updateLessonList()
             if (States.queryVideos == null) {
                 Object("data").Array("dataList").first().let {
-                    println(it)
+                    logOut(it)
                     States.queryVideos = listOf("termYear" to it.String("year"), "term" to it.String("num"))
                     States.lessonNow = "---"
                 }
                 updateVideoList()
             }
         }?.onFailure {
-            it.printStackTrace()
+            logOut(it.stackTraceToString())
         }
         States.syncState = SyncState.SYNCED
     }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import utils.OkHttpUtil
+import java.io.File
 
 val client = HttpClient(OkHttp) {
     install(Logging) {
@@ -49,6 +50,12 @@ val client = HttpClient(OkHttp) {
             hostnameVerifier(OkHttpUtil.ignoreSslHostnameVerifier)
         }
     }
+}
+val logFile = File("log.txt")
+@Synchronized
+fun logOut(any: Any){
+    println(any)
+    logFile.appendText(any.toString()+"\n")
 }
 
 suspend fun main() {

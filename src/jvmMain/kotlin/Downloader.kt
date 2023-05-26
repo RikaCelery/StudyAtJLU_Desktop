@@ -31,14 +31,14 @@ suspend fun download(baseFolder:File,query: Pair<String,String>,cookie:String) {
             else null
         }
     }.onFailure {
-        println(body)
+        logOut(body)
     }.getOrThrow()
     for (res in all) {
         val info = runCatching {
             client.get(QUERY_VIDEO_INFO)
                 .body<JsonObject>().Object("data")
         }.onFailure {
-            println(
+            logOut(
                 client.get(QUERY_VIDEO_INFO) {
                     parameter("resourceId", res.first)
                 }
@@ -46,7 +46,7 @@ suspend fun download(baseFolder:File,query: Pair<String,String>,cookie:String) {
             )
         }.getOrNull()
         if (info == null) {
-            println("failed: $res")
+            logOut("failed: $res")
             continue
         }
         val folderName = info.String("resourceName").replace(':', '_').replace('*', '_')
@@ -72,7 +72,7 @@ suspend fun download(baseFolder:File,query: Pair<String,String>,cookie:String) {
             // 只有算法课下载教师画面
             if (fileName.contains("教师") && !folderName.contains("算法")) continue
             val url = Url(videoInfo.String("videoPath"))
-            println("prepare to download $folderName/$subFolderName/$fileName")
+            logOut("prepare to download $folderName/$subFolderName/$fileName")
 
             val tmpFile = baseFolder.resolve(folderName).resolve(subFolderName).resolve("$fileName.tmp")
             val finalFile = baseFolder.resolve(folderName).resolve(subFolderName).resolve("$fileName.mp4")
@@ -112,7 +112,7 @@ private suspend fun receiveStream(
     fs: FileOutputStream,
 ) {
     val channel = httpResponse.bodyAsChannel()
-    println("downloading ${Path(folderName,subFolderName,tmpFileName).normalize().pathString}")
+    logOut("downloading ${Path(folderName,subFolderName,tmpFileName).normalize().pathString}")
     val contentLength = httpResponse.contentLength()?.toString() ?: "unknown"
     val start = System.currentTimeMillis()
     withContext(Dispatchers.IO) {
@@ -137,6 +137,6 @@ private suspend fun receiveStream(
             fs.writePacket(packet)
         }
     }
-    println()
-    println("downloaded ${Path(folderName,subFolderName,tmpFileName).normalize().pathString}")
+    logOut()
+    logOut("downloaded ${Path(folderName,subFolderName,tmpFileName).normalize().pathString}")
 }
