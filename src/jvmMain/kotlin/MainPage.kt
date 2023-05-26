@@ -24,6 +24,10 @@ import kotlinx.serialization.json.put
 import utils.*
 
 suspend fun updateVideoList() {
+    States.syncState = SyncState.SYNCING
+    require(States.queryVideos != null)
+    logOut(States.queryVideos)
+    States.videos.clear()
     States.queryVideos?.runCatching {
         val body = client.get(QUERY_LIVE_AND_RECORD) {
             parameter("roomType", 0)
@@ -32,7 +36,7 @@ suspend fun updateVideoList() {
 
             header("Cookie", States.cookie)
         }.body<JsonObject>()
-        logOut(body)
+//        logOut(body)
         body.Object("data").Array("dataList").filter { it.StringOrNull("isOpen") != null }
     }?.onFailure {
         logOut(it.stackTraceToString())
@@ -46,7 +50,7 @@ suspend fun updateVideoList() {
                     append(it.String("teacherName"))
                     append("\n  ")
                     append(
-                        "${it.String("currentWeek")}周 " + "星期${it.String("currentDay")}" + "(${it.String("roomName")}) " + "${
+                        "${it.String("currentWeek")}周 " + "星期${it.String("currentDay")}" + "(${it.StringOrNull("roomName")}) " + "${
                             it.String(
                                 "currentDate"
                             )
@@ -58,13 +62,72 @@ suspend fun updateVideoList() {
                 put("id", it.String("id"))
             }
         })
-        logOut(States.videos)
+        logOut(States.videos.toList())
     }?.onFailure {
         logOut(it.stackTraceToString())
+    }?.getOrNull()?.let {
+        States.syncState = SyncState.SYNCED
+    } ?: run {
+        States.syncState = SyncState.FAILED()
     }
+
+}
+
+suspend fun updateTermVideoList(termId: String) {
+    States.syncState = SyncState.SYNCING
+    require(States.queryVideos != null)
+    logOut(States.queryVideos)
+    States.videos.clear()
+    States.queryVideos?.runCatching {
+        updateLessonList()
+        States.syncState = SyncState.SYNCING
+        States.lessons.map {
+            client.get(QUERY_LIVE_AND_RECORD) {
+                parameter("roomType", 0)
+                parameter("identity", 2)
+                parameter("submitStatus", 0)
+                parameter("termId", termId)
+                parameter("teachClassId", it.String("classroomId"))
+                header("Cookie", States.cookie)
+            }.body<JsonObject>().Object("data").ObjectArray("dataList").filter { it.StringOrNull("isOpen") != null }
+        }.flatten()
+    }?.onFailure {
+        logOut(it.stackTraceToString())
+    }?.getOrNull()?.runCatching {
+        States.videos.clear()
+        States.videos.addAll(map {
+            buildJsonObject {
+                put("info", buildString {
+                    append(it.String("courseName"))
+                    append(":")
+                    append(it.String("teacherName"))
+                    append("\n  ")
+                    append(
+                        "${it.String("currentWeek")}周 " + "星期${it.String("currentDay")}" + "(${it.StringOrNull("roomName")}) " + "${
+                            it.String(
+                                "currentDate"
+                            )
+                        } " + it.String("timeRange")
+                    )
+
+                })
+                put("res_id", it.String("resourceId"))
+                put("id", it.String("id"))
+            }
+        })
+        logOut(States.videos.toList())
+    }?.onFailure {
+        logOut(it.stackTraceToString())
+    }?.getOrNull()?.let {
+        States.syncState = SyncState.SYNCED
+    } ?: run {
+        States.syncState = SyncState.FAILED()
+    }
+
 }
 
 suspend fun updateLessonList() {
+    States.syncState = SyncState.SYNCING
     runCatching {
         logOut("updateLessonList")
         val body = client.get("https://ilearntec.jlu.edu.cn/studycenter/platform/classroom/myClassroom") {
@@ -74,15 +137,19 @@ suspend fun updateLessonList() {
         }.body<JsonObject>()
         logOut(body)
         body
-    }?.onFailure {
+    }.onFailure {
         logOut(it.stackTraceToString())
-    }?.getOrNull()?.runCatching {
+    }.getOrNull()?.runCatching {
         Object("data").Array("dataList")
     }?.onSuccess {
         States.lessons.clear()
         States.lessons.addAll(it.map {
             it as JsonObject
         })
+    }?.let {
+        States.syncState = SyncState.SYNCED
+    } ?: run {
+        States.syncState = SyncState.FAILED()
     }
 }
 
@@ -97,7 +164,7 @@ fun MainPage() {
                 filter1Name = "按课程筛选",
                 filter1Content = States.lessons,
                 setFilter1 = {
-                    States.lessonNow = ((it.String("courseName") + it.String("teacherName")))
+                    States.lessonNow = it.String("courseName")/* + it.String("teacherName")*/
                     logOut(it)
                     States.queryType = 0
                     States.queryVideos = listOf(
@@ -111,11 +178,17 @@ fun MainPage() {
                 filter2Name = "按学期筛选",
                 filter2Content = States.terms,
                 setFilter2 = {
-                    States.termNow = (it.String("year") + it.String("num"))
+                    States.termNow = (it.String("year") + it.String("name"))
                     States.lessonNow = "---"
                     States.currentTerm = it.String("id")
                     States.queryVideos = listOf("termYear" to it.String("year"), "term" to it.String("num"))
-                    mainScope.launch { updateLessonList() }
+                    mainScope.launch {
+                        updateLessonList()
+                        if (States.currentTerm == States.terms.first().String("id"))
+                            updateVideoList()
+                        else
+                            updateTermVideoList(States.currentTerm)
+                    }
                     logOut(it)
                 },
                 current2 = States.termNow,
@@ -247,6 +320,8 @@ private fun syncCourses(mainScope: CoroutineScope) {
                 }
             }
             updateLessonList()
+            States.syncState = SyncState.SYNCING
+
             if (States.queryVideos == null) {
                 Object("data").Array("dataList").first().let {
                     logOut(it)
@@ -254,10 +329,14 @@ private fun syncCourses(mainScope: CoroutineScope) {
                     States.lessonNow = "---"
                 }
                 updateVideoList()
+                States.syncState = SyncState.SYNCING
             }
         }?.onFailure {
             logOut(it.stackTraceToString())
+        }?.let {
+            States.syncState = SyncState.SYNCED
+        } ?: run {
+            States.syncState = SyncState.FAILED()
         }
-        States.syncState = SyncState.SYNCED
     }
 }

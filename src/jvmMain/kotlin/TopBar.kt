@@ -74,9 +74,6 @@ fun TopBar(
                 append(it.String("courseName"))
                 append(":")
                 append(it.String("teacherName"))
-//                append("\n")
-//                append("${it.String("currentWeek")}周 星期${it.String("currentDay")}(${it.String("roomName")}) ${it.String("currentDate")} ${it.String("timeRange")}")
-
             }
         }, setFilter1, Modifier)
         Spacer(Modifier.width(2.dp))

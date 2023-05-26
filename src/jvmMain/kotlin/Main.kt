@@ -52,13 +52,20 @@ val client = HttpClient(OkHttp) {
     }
 }
 val logFile = File("log.txt")
+
 @Synchronized
-fun logOut(any: Any){
+fun logOut(any: Any?) {
     println(any)
-    logFile.appendText(any.toString()+"\n")
+    logFile.appendText(any.toString() + "\n")
 }
 
-suspend fun main() {
+@Synchronized
+fun logOut() {
+    println()
+    logFile.appendText("\n")
+}
+
+fun main() {
 
     application {
         Window(onCloseRequest = ::exitApplication) {
