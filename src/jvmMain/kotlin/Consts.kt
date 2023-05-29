@@ -6,6 +6,6 @@ const val UNIT_KB = 1024
 const val UNIT_MB = UNIT_KB * 1024
 
 //64 KB
-const val DOWNLOAD_BUFFER_SIZE = UNIT_KB * 64L
+const val DOWNLOAD_BUFFER_SIZE = UNIT_KB * 128L
 
 

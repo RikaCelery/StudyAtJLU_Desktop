@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.OffsetMapping
@@ -60,9 +61,11 @@ fun TopBar(
                     )
             }
             when (syncState) {
-                is SyncState.FAILED -> Icon(painterResource("sync_problem.svg"), "refresh list")
+                is SyncState.FAILED -> Icon(painterResource("sync_problem.svg"), "refresh list", tint = Color.Red)
                 SyncState.OUT_DATE -> Icon(painterResource("sync.svg"), "refresh list")
-                SyncState.SYNCED -> Icon(painterResource("done_outline.svg"), "refresh list")
+                SyncState.SYNCED -> {
+                    Icon(painterResource("done_outline.svg"), "refresh list")
+                }
                 SyncState.SYNCING -> {
                     Icon(painterResource("sync.svg"), "refresh list", Modifier.rotate(rotationState.value))
                 }

@@ -9,134 +9,160 @@ import kotlinx.serialization.json.JsonObject
 import utils.Array
 import utils.Object
 import utils.String
-import utils.StringOrNull
 import java.io.File
 import java.io.FileOutputStream
-import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
 
-suspend fun download(baseFolder:File,query: Pair<String,String>,cookie:String) {
-    val body = client.get(QUERY_LIVE_AND_RECORD) {
-        parameter("roomType", 0)
-        parameter("identity", 2)
-        parameter(query.first, query.second)
-        header("Cookie", cookie)
-    }.body<JsonObject>()
-    val all = body.runCatching {
-        Object("data").Array("dataList").mapNotNull {
-            if (it.StringOrNull("resourceId") != null) Triple(
-                it.String("resourceId"), it.String("scheduleTimeStart"), it.String("scheduleTimeEnd")
-            )
-            else null
-        }
-    }.onFailure {
-        logOut(body)
-    }.getOrThrow()
-    for (res in all) {
-        val info = runCatching {
-            client.get(QUERY_VIDEO_INFO)
-                .body<JsonObject>().Object("data")
-        }.onFailure {
-            logOut(
-                client.get(QUERY_VIDEO_INFO) {
-                    parameter("resourceId", res.first)
-                }
-                    .body<String>()
-            )
-        }.getOrNull()
-        if (info == null) {
-            logOut("failed: $res")
-            continue
-        }
-        val folderName = info.String("resourceName").replace(':', '_').replace('*', '_')
-        // 忽略以下课程
-        if (folderName.contains("习近平新时代中国特色社会主义思想概论")) continue
-        if (folderName.contains("IA32")) continue
-        if (folderName.contains("直播课")) continue
-        if (folderName.contains("微积分")) continue
-        if (folderName.contains("Java")) continue
+suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resourceId: String, type: Int = 0) {
 
-        val subFolderName = res.second.substringBefore(' ').replace(':', '_').replace('*', '_')
-        //同时下载电脑画面和教师画面，但是下载其实是跑满的所以没必要这么干
-//        supervisorScope {
-        val htmlFile = baseFolder.resolve(folderName).resolve(subFolderName).apply { if (exists().not()) mkdirs() }
-            .resolve("index.html")
-        var hdmiFilePath = ""
-        var teacherFilePath = ""
-        for (videoInfo in info.Array("videoList")) {
-            val fileName =
-                res.second.substringAfter(' ').replace(':', '_').plus(' ').plus(videoInfo.String("videoName"))
-            if (fileName.contains("教师")) teacherFilePath = "$fileName.mp4"
-            if (fileName.contains("HDMI")) hdmiFilePath = "$fileName.mp4"
-            // 只有算法课下载教师画面
-            if (fileName.contains("教师") && !folderName.contains("算法")) continue
-            val url = Url(videoInfo.String("videoPath"))
-            logOut("prepare to download $folderName/$subFolderName/$fileName")
+    val info = runCatching {
+        client.get(QUERY_VIDEO_INFO) {
+            parameter("resourceId", resourceId)
+        }.body<JsonObject>().Object("data")
+    }.onFailure {}.getOrNull()
+    if (info == null) {
+        logOut("failed: $resourceId")
+        return
+    }
 
-            val tmpFile = baseFolder.resolve(folderName).resolve(subFolderName).resolve("$fileName.tmp")
-            val finalFile = baseFolder.resolve(folderName).resolve(subFolderName).resolve("$fileName.mp4")
-            if (finalFile.exists()) continue
-            if (tmpFile.exists()) tmpFile.delete()
-            withContext(Dispatchers.IO) {
-                tmpFile.outputStream().use {
-                    client.prepareGet(url) {}.execute { httpResponse ->
-                        try {
-                            receiveStream(httpResponse, folderName, subFolderName, fileName, it)
-                        } catch (e: CancellationException) {
-                            tmpFile.delete()
+    println(info)
+
+    val htmlFile =
+        folder.apply { if (exists().not()) mkdirs() }.resolve("index.html")
+
+    val videoInfos = info.Array("videoList")
+
+    val teacherVideoInfo = videoInfos.single { it.String("videoName").contains("教师") }
+    val pcVideoInfo = videoInfos.single { it.String("videoName").contains("HDMI") }
+
+    val teacherUrl = Url(teacherVideoInfo.String("videoPath"))
+    val pcUrl = Url(pcVideoInfo.String("videoPath"))
+
+    supervisorScope {
+        if (type == 0) {
+            if (States.tasks.get(resourceId+"_1")?.isActive==true)
+                return@supervisorScope
+            States.tasks[resourceId+"_1"]  = launch {
+                runCatching {
+                    downloadToFile(teacherFile, teacherUrl) { current, total, totalTime, time ->
+                        if (total != -1L) {
+                            val progress = current.times(1f).div(total)
+                            States.progress[resourceId + "_1"] = progress
+
+                            val speed = current.times(1f).div(totalTime).times(1000)
+
+                            States.progressInfo[resourceId + "_1"] = "%.2f%% %.2fMB/s".format(progress*100,speed.div(UNIT_MB))
                         }
                     }
+                }.onSuccess {
+                    States.progress.remove(resourceId + "_1")
+                    States.progressInfo.remove(resourceId + "_1")
+                }.onFailure {
+                    if (it is CancellationException){
+                    States.progressInfo.put(resourceId + "_1", "Cancelled")
+
+                    }else{
+                    States.progressInfo.put(resourceId + "_1", "Failed")
+                    it.printStackTrace()
+                    }
                 }
-                tmpFile.renameTo(finalFile)
+            }
+        } else {
+            if (States.tasks.get(resourceId+"_2")?.isActive==true)
+                return@supervisorScope
+            States.tasks[resourceId+"_2"] = launch {
+                runCatching {
+                    downloadToFile(pcFile, pcUrl) { current, total, totalTime, time ->
+                        if (total != -1L) {
+                            val progress = current.times(1f).div(total)
+                            States.progress[resourceId + "_2"] = progress
+                            val speed = current.times(1f).div(totalTime).times(1000)
+                            States.progressInfo[resourceId + "_2"] = "%.2f%% %.2fMB/s".format(progress*100,speed.div(UNIT_MB))
+                        }
+                    }
+                }.onSuccess {
+                    States.progress.remove(resourceId + "_2")
+                    States.progressInfo.remove(resourceId + "_2")
+                }.onFailure {
+                    if (it is CancellationException){
+                    States.progressInfo.put(resourceId + "_2", "Cancelled")
+
+                    }else{
+                    States.progressInfo.put(resourceId + "_2", "Failed")
+                    it.printStackTrace()
+                    }
+                }
             }
         }
-        //播放器
-        htmlFile.writeText(
-            """<head><title></title><meta charset="UTF-8" /></head><body><div id="tooltip">00:00 / 00:00</div><div class="container" id="videos"><div class="hdmi"><video src="./{HDMI}" id="hdmi" ontimeupdate="updateProgressBar()"></video><input type="range" id="progressBar1" min="0" max="100" step="0.1" value="0" oninput="seekTo(this.value)"></div><div class="teacher"><video src="./{TEACHER}" muted id="teacher"></video></div></div></body><script>var tooltip = document.getElementById("tooltip");document.addEventListener("keydown", function (event) {if (event.code === "Space") {togglePlay();event.preventDefault();};});var video = document.getElementById("hdmi");var video2 = document.getElementById("teacher");var progressBar = document.getElementById("progressBar1");function updateTooltip() {var currentTime = formatTime(video.currentTime);var duration = formatTime(video.duration);tooltip.textContent = currentTime + " / " + duration;};setTimeout(updateTooltip, 2000);video.addEventListener("timeupdate", updateTooltip);hideTooltip = undefined;document.addEventListener("mousemove", function (event) {clearTimeout(hideTooltip);tooltip.style.opacity = 1;tooltip.style.top = 10+event.clientY + window.pageYOffset + "px";tooltip.style.left = event.clientX + window.pageXOffset + "px";hideTooltip = setTimeout(() => tooltip.style.opacity = 0, 700);});document.addEventListener("mouseenter", function () {tooltip.style.opacity = 1;});document.addEventListener("mouseleave", function () {tooltip.style.opacity = 0;});function formatTime(time) {var minutes = Math.floor(time / 60);var seconds = Math.floor(time % 60);return (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;};function updateProgressBar() {var currentTime = (video.currentTime / video.duration) * 100;progressBar.value = currentTime;};function seekTo(value) {var timeToSeek = (value / 100) * video.duration;video.currentTime = timeToSeek;video2.currentTime = timeToSeek;};function togglePlay() {var video1 = document.getElementById("hdmi");if (video1.paused) {video1.play();} else {video1.pause();};var video2 = document.getElementById("teacher");if (video2.paused) {video2.play();} else {video2.pause();};};</script><style>* {padding: 0;margin: 0;box-sizing: border-box;}body {background-color: black;}::-webkit-scrollbar {display: none;}.container {width: 100vw;height: 100vh;display: flex;flex-wrap: wrap;}#tooltip {position: absolute;padding: 5px;background-color: rgba(0, 0, 0, 0.383);color: white;font-size: 12px;opacity: 0;pointer-events: none;border-radius: 20px;transition: opacity ease 0.3s;}video,input {width: 100%;/* height: 100vh; */flex-grow: 1;}</style>""".replace(
-                "{HDMI}", hdmiFilePath
-            ).replace("{TEACHER}", teacherFilePath)
-        )
-//        }
     }
-    client.close()
+    //播放器
+    htmlFile.writeText(
+        """<head><title></title><meta charset="UTF-8" /></head><body><div id="tooltip">00:00 / 00:00</div><div class="container" id="videos"><div class="hdmi"><video src="./{HDMI}" id="hdmi" ontimeupdate="updateProgressBar()"></video><input type="range" id="progressBar1" min="0" max="100" step="0.1" value="0" oninput="seekTo(this.value)"></div><div class="teacher"><video src="./{TEACHER}" muted id="teacher"></video></div></div></body><script>var tooltip = document.getElementById("tooltip");document.addEventListener("keydown", function (event) {if (event.code === "Space") {togglePlay();event.preventDefault();};});var video = document.getElementById("hdmi");var video2 = document.getElementById("teacher");var progressBar = document.getElementById("progressBar1");function updateTooltip() {var currentTime = formatTime(video.currentTime);var duration = formatTime(video.duration);tooltip.textContent = currentTime + " / " + duration;};setTimeout(updateTooltip, 2000);video.addEventListener("timeupdate", updateTooltip);hideTooltip = undefined;document.addEventListener("mousemove", function (event) {clearTimeout(hideTooltip);tooltip.style.opacity = 1;tooltip.style.top = 10+event.clientY + window.pageYOffset + "px";tooltip.style.left = event.clientX + window.pageXOffset + "px";hideTooltip = setTimeout(() => tooltip.style.opacity = 0, 700);});document.addEventListener("mouseenter", function () {tooltip.style.opacity = 1;});document.addEventListener("mouseleave", function () {tooltip.style.opacity = 0;});function formatTime(time) {var minutes = Math.floor(time / 60);var seconds = Math.floor(time % 60);return (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;};function updateProgressBar() {var currentTime = (video.currentTime / video.duration) * 100;progressBar.value = currentTime;};function seekTo(value) {var timeToSeek = (value / 100) * video.duration;video.currentTime = timeToSeek;video2.currentTime = timeToSeek;};function togglePlay() {var video1 = document.getElementById("hdmi");if (video1.paused) {video1.play();} else {video1.pause();};var video2 = document.getElementById("teacher");if (video2.paused) {video2.play();} else {video2.pause();};};</script><style>* {padding: 0;margin: 0;box-sizing: border-box;}body {background-color: black;}::-webkit-scrollbar {display: none;}.container {width: 100vw;height: 100vh;display: flex;flex-wrap: wrap;}#tooltip {position: absolute;padding: 5px;background-color: rgba(0, 0, 0, 0.383);color: white;font-size: 12px;opacity: 0;pointer-events: none;border-radius: 20px;transition: opacity ease 0.3s;}video,input {width: 100%;/* height: 100vh; */flex-grow: 1;}</style>""".replace(
+            "{HDMI}", pcFile.toRelativeString(folder)
+        ).replace("{TEACHER}", teacherFile.toRelativeString(folder))
+    )
+}
+
+suspend fun downloadToFile(
+    finalFile: File,
+    url: Url,
+    onProgress: (current: Long, total: Long, totalTimeCost: Long, currentTimeCost: Long) -> Unit = { _, _, _, _ -> },
+
+    ) {
+    val tmpFile = finalFile.parentFile.resolve("${finalFile.name}.tmp")
+    if (finalFile.exists()) return
+    if (tmpFile.exists()) tmpFile.delete()
+    withContext(Dispatchers.IO) {
+        tmpFile.outputStream().use {
+            client.prepareGet(url) {}.execute { httpResponse ->
+                try {
+                    it.receiveStream(httpResponse, finalFile, onProgress)
+                } catch (e: CancellationException) {
+                    tmpFile.delete()
+                }
+            }
+        }
+        tmpFile.renameTo(finalFile)
+    }
 }
 
 
-
-private suspend fun receiveStream(
+private suspend fun FileOutputStream.receiveStream(
     httpResponse: HttpResponse,
-    folderName: String,
-    subFolderName: String,
-    tmpFileName: String,
-    fs: FileOutputStream,
+    file: File,
+    onProgress: (current: Long, total: Long, totalTimeCost: Long, currentTimeCost: Long) -> Unit = { _, _, _, _ -> },
 ) {
     val channel = httpResponse.bodyAsChannel()
-    logOut("downloading ${Path(folderName,subFolderName,tmpFileName).normalize().pathString}")
-    val contentLength = httpResponse.contentLength()?.toString() ?: "unknown"
+    logOut("downloading ${(file.toPath()).normalize().pathString}")
+    val contentLength = httpResponse.contentLength() ?: -1L
     val start = System.currentTimeMillis()
     withContext(Dispatchers.IO) {
+        var last = start
         while (!channel.isClosedForRead) {
+            last = System.currentTimeMillis()
             val packet = channel.readRemaining(DOWNLOAD_BUFFER_SIZE)
-            print(buildString {
-                append("write: ")
-                if (contentLength.all(Char::isDigit)) {
-                    append("%.2f%%".format(channel.totalBytesRead.times(100.0).div(contentLength.toLong())))
-                } else {
-                    append("Nan%")
-                }
-                append(' ')
-                append(channel.totalBytesRead)
-                append('/')
-                append(contentLength)
-                append(' ')
-                val speed = channel.totalBytesRead.times(1f).div(System.currentTimeMillis() - start).times(1000)
-                append("%.2fMB/s".format(speed.div(UNIT_MB)))
-                append('\r')
-            })
-            fs.writePacket(packet)
+            writePacket(packet)
+//            print(buildString {
+//                append("write: ")
+//                if (contentLength != -1L) {
+//                    append("%.2f%%".format(channel.totalBytesRead.times(100.0).div(contentLength)))
+//                } else {
+//                    append("Nan%")
+//                }
+//                append(' ')
+//                append(channel.totalBytesRead)
+//                append('/')
+//                append(contentLength)
+//                append(' ')
+//                val speed = channel.totalBytesRead.times(1f).div(System.currentTimeMillis() - start).times(1000)
+//                append("%.2fMB/s".format(speed.div(UNIT_MB)))
+//                append('\r')
+//            })
+            val now = System.currentTimeMillis()
+            onProgress(channel.totalBytesRead, contentLength, now - start, now - last)
         }
     }
     logOut()
-    logOut("downloaded ${Path(folderName,subFolderName,tmpFileName).normalize().pathString}")
+    logOut("downloaded ${file.toPath()}.normalize().pathString}")
 }

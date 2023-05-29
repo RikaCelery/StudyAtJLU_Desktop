@@ -1,7 +1,9 @@
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -15,6 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,6 +25,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import utils.*
+import java.io.File
 
 suspend fun updateVideoList() {
     States.syncState = SyncState.SYNCING
@@ -39,11 +43,19 @@ suspend fun updateVideoList() {
 //        logOut(body)
         body.Object("data").Array("dataList").filter { it.StringOrNull("isOpen") != null }
     }?.onFailure {
+        if (it is CancellationException) {
+
+        } else {
+            States.syncState = SyncState.FAILED(it)
+        }
         logOut(it.stackTraceToString())
     }?.getOrNull()?.runCatching {
         States.videos.clear()
         States.videos.addAll(map {
             buildJsonObject {
+                put("lessonName", it.String("courseName"))
+                put("date", it.String("scheduleTimeStart").substringBefore(' '))
+                put("timeRange", it.String("timeRange").replace(':', '点'))
                 put("info", buildString {
                     append(it.String("courseName"))
                     append(":")
@@ -64,15 +76,27 @@ suspend fun updateVideoList() {
         })
         logOut(States.videos.toList())
     }?.onFailure {
+        if (it is CancellationException) {
+
+        } else {
+            States.syncState = SyncState.FAILED(it)
+        }
         logOut(it.stackTraceToString())
-    }?.getOrNull()?.let {
+    }?.onSuccess {
         States.syncState = SyncState.SYNCED
-    } ?: run {
-        States.syncState = SyncState.FAILED()
     }
 
 }
+//贝塞尔曲线
+fun calculateY(t: Float): Float {
+    val tSquared = t * t
+    val oneMinusT = 1 - t
+    val oneMinusTSquared = oneMinusT * oneMinusT
 
+    val y = oneMinusTSquared * 0.0 + 2 * oneMinusT * t * 0.7 + tSquared * 0.7
+
+    return y.toFloat()
+}
 suspend fun updateTermVideoList(termId: String) {
     States.syncState = SyncState.SYNCING
     require(States.queryVideos != null)
@@ -92,6 +116,11 @@ suspend fun updateTermVideoList(termId: String) {
             }.body<JsonObject>().Object("data").ObjectArray("dataList").filter { it.StringOrNull("isOpen") != null }
         }.flatten()
     }?.onFailure {
+        if (it is CancellationException) {
+
+        } else {
+            States.syncState = SyncState.FAILED(it)
+        }
         logOut(it.stackTraceToString())
     }?.getOrNull()?.runCatching {
         States.videos.clear()
@@ -117,11 +146,14 @@ suspend fun updateTermVideoList(termId: String) {
         })
         logOut(States.videos.toList())
     }?.onFailure {
+        if (it is CancellationException) {
+
+        } else {
+            States.syncState = SyncState.FAILED(it)
+        }
         logOut(it.stackTraceToString())
-    }?.getOrNull()?.let {
+    }?.onSuccess {
         States.syncState = SyncState.SYNCED
-    } ?: run {
-        States.syncState = SyncState.FAILED()
     }
 
 }
@@ -138,6 +170,11 @@ suspend fun updateLessonList() {
         logOut(body)
         body
     }.onFailure {
+        if (it is CancellationException) {
+
+        } else {
+            States.syncState = SyncState.FAILED(it)
+        }
         logOut(it.stackTraceToString())
     }.getOrNull()?.runCatching {
         Object("data").Array("dataList")
@@ -146,13 +183,19 @@ suspend fun updateLessonList() {
         States.lessons.addAll(it.map {
             it as JsonObject
         })
-    }?.let {
+    }?.onFailure {
+        if (it is CancellationException) {
+
+        } else {
+            States.syncState = SyncState.FAILED(it)
+        }
+        logOut(it.stackTraceToString())
+    }?.onSuccess {
         States.syncState = SyncState.SYNCED
-    } ?: run {
-        States.syncState = SyncState.FAILED()
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 @Suppress("FunctionName")
 fun MainPage() {
@@ -172,7 +215,8 @@ fun MainPage() {
                         "submitStatus" to "0",
                         "teachClassId" to it.String("classroomId"),
                     )
-                    mainScope.launch { updateVideoList() }
+                    States.currentJob?.cancel()
+                    States.currentJob = mainScope.launch { updateVideoList() }
                 },
                 current1 = States.lessonNow,
                 filter2Name = "按学期筛选",
@@ -182,12 +226,11 @@ fun MainPage() {
                     States.lessonNow = "---"
                     States.currentTerm = it.String("id")
                     States.queryVideos = listOf("termYear" to it.String("year"), "term" to it.String("num"))
-                    mainScope.launch {
+                    States.currentJob?.cancel()
+                    States.currentJob = mainScope.launch {
                         updateLessonList()
-                        if (States.currentTerm == States.terms.first().String("id"))
-                            updateVideoList()
-                        else
-                            updateTermVideoList(States.currentTerm)
+                        if (States.currentTerm == States.terms.first().String("id")) updateVideoList()
+                        else updateTermVideoList(States.currentTerm)
                     }
                     logOut(it)
                 },
@@ -216,72 +259,123 @@ fun MainPage() {
             when (States.pageState) {
                 PageState.INDEX -> {
                     LazyColumn {
-                        items(States.videos.size, { States.videos[it].hashCode() }) {
-                            val id = States.videos[it].String("res_id")
-                            Box(Modifier.fillMaxWidth().height(50.dp).background(Color.Transparent).clickable {}) {
-                                Row(
-                                    Modifier.fillMaxSize()/*.background(Color.Cyan)*/,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
+                        items(States.videos, { it.hashCode() }) { lessonInfo ->
+                            Box(Modifier.animateItemPlacement()) {
+                                val id = lessonInfo.String("res_id")
+                                Spacer(Modifier.height(4.dp))
+                                Box(Modifier.fillMaxWidth().height(80.dp).background(Color.Transparent).clickable {}) {
+                                    Row(
+                                        Modifier.fillMaxSize()/*.background(Color.Cyan)*/,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            lessonInfo.String("info"), modifier = Modifier.weight(1f, false)
+                                        )
+                                        //button:
+                                        Row() {
+                                            //play
+                                            val modifier = Modifier.size(40.dp)
+                                            val modifier1 = Modifier.padding(5.dp)
+                                            IconButton({
 
-                                    //info
-//                                    Text(
-//                                        "${States.videos[it].String("courseName")}${States.videos[it].String("roomName")}${
-//                                            States.videos[it].String(
-//                                                "currentWeek"
-//                                            )
-//                                        }${States.videos[it].String("currentDay")}${States.videos[it].String("scheduleTimeStart")}",
-//                                        modifier = Modifier.weight(1f, false)
-//                                    )
-                                    Text(
-                                        States.videos[it].String("info"), modifier = Modifier.weight(1f, false)
-                                    )
-                                    //button:
-                                    Row() {
-                                        //play
-                                        val modifier = androidx.compose.ui.Modifier.size(40.dp)
-                                        val modifier1 = androidx.compose.ui.Modifier.padding(5.dp)
-                                        IconButton({}, modifier) {
-                                            Icon(painterResource("play_arrow.svg"), "download", modifier1)
-                                        }
-                                        //download use when to switch
-                                        val downloaded = DownloadState.NOT_DOWNLOADED
-                                        when (downloaded) {
-                                            DownloadState.NOT_DOWNLOADED -> IconButton({}, modifier) {
+                                            }, modifier) {
+                                                Icon(painterResource("play_arrow.svg"), "download", modifier1)
+                                            }
+
+                                            val lessonName =
+                                                lessonInfo.String("lessonName").replace(':', '_').replace("*", "")
+
+                                            val date =
+                                                lessonInfo.String("date")
+                                                    .replace(':', '_')
+
+                                            val folder =
+                                                States.downloadFolder.resolve(lessonName).resolve(date).canonicalFile
+                                            val teacherFile = folder.resolve(
+                                                "${
+                                                    date.plus(' ').plus(lessonInfo.String("timeRange"))
+                                                } $date 教师机位.mp4"
+                                            )
+                                            val pcFile = folder.resolve(
+                                                "${
+                                                    date.plus(' ').plus(lessonInfo.String("timeRange"))
+                                                } HDMI.mp4"
+                                            )
+
+                                            //download use when to switch
+                                            if (teacherFile.exists()) IconButton({}, modifier) {
+                                                Icon(painterResource("done_outline.svg"), "download", modifier1)
+                                            } else if (States.tasks[id + "_1"]?.isActive == true) {
+                                                IconButton({
+                                                    States.tasks[id + "_1"]?.cancel()
+                                                }, modifier) {
+                                                    Icon(
+                                                        painterResource("half_downloaded.svg"), "download", modifier1
+                                                    )
+                                                }
+                                            } else IconButton({
+                                                mainScope.launch {
+                                                    downloadVideo(folder, teacherFile, pcFile, id)
+                                                }
+                                            }, modifier) {
                                                 Icon(painterResource("download.svg"), "download", modifier1)
                                             }
 
-                                            DownloadState.HALF_DOWNLOADED -> IconButton({}, modifier) {
-                                                Icon(
-                                                    painterResource("half_downloaded.svg"), "download", modifier1
-                                                )
+
+                                            if (pcFile.exists()) IconButton({}, modifier) {
+                                                Icon(painterResource("done_outline.svg"), "download", modifier1)
+                                            } else if (States.tasks[id + "_2"]?.isActive == true) {
+                                                IconButton({
+                                                    States.tasks[id + "_2"]?.cancel()
+                                                }, modifier) {
+                                                    Icon(
+                                                        painterResource("half_downloaded.svg"), "download", modifier1
+                                                    )
+                                                }
+                                            } else IconButton({
+                                                mainScope.launch {
+                                                    downloadVideo(folder, teacherFile, pcFile, id, 1)
+                                                }
+                                            }, modifier) {
+                                                Icon(painterResource("download.svg"), "download", modifier1)
                                             }
 
-                                            DownloadState.DOWNLOADED -> IconButton({}, modifier) {
-                                                Icon(painterResource("done_outline.svg"), "download", modifier1)
+                                            //open folder
+                                            IconButton({}, modifier) {
+                                                Icon(painterResource("folder_open.svg"), "folder_open", modifier1)
                                             }
                                         }
-                                        //open folder
-                                        IconButton({}, modifier) {
-                                            Icon(painterResource("folder_open.svg"), "folder_open", modifier1)
+                                    }
+                                    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                                            States.progress[id + "_1"]?.let {
+
+                                                LinearProgressIndicator(
+                                                    it,
+                                                    Modifier.height(8.dp).weight(1f),
+                                                    color = Color.hsv(calculateY(it)*120, 1f, 1f)
+                                                )
+                                            } ?: Spacer(Modifier.height(8.dp).weight(1f))
+                                            Text(States.progressInfo[id + "_1"] ?: "")
+                                        }
+                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                                            States.progress[id + "_2"]?.let {
+                                                LinearProgressIndicator(
+                                                    it,
+                                                    Modifier.height(8.dp).weight(1f),
+                                                    color = Color.hsv(calculateY(it)*120, 1f, 1f)
+                                                )
+                                            } ?: Spacer(Modifier.height(8.dp).weight(1f))
+                                            Text(States.progressInfo[id + "_2"] ?: "")
                                         }
                                     }
                                 }
-                                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-                                    LinearProgressIndicator(
-                                        0.4f, androidx.compose.ui.Modifier.height(5.dp).fillMaxWidth()
-                                    )
-                                    LinearProgressIndicator(
-                                        0.6f, androidx.compose.ui.Modifier.height(5.dp).fillMaxWidth()
-                                    )
-                                }
+                                Spacer(Modifier.height(4.dp))
+                                Spacer(
+                                    Modifier.height(2.dp).fillMaxWidth().background(Color.Gray)
+                                )
                             }
-                            Spacer(androidx.compose.ui.Modifier.height(4.dp))
-                            Spacer(
-                                androidx.compose.ui.Modifier.height(2.dp).fillMaxWidth().background(Color.Gray)
-                            )
-                            Spacer(androidx.compose.ui.Modifier.height(4.dp))
                         }
                     }
                 }
@@ -297,7 +391,8 @@ fun MainPage() {
 
 private fun syncCourses(mainScope: CoroutineScope) {
     States.syncState = SyncState.SYNCING
-    mainScope.launch(Dispatchers.Default) {
+    States.currentJob?.cancel()
+    States.currentJob = mainScope.launch(Dispatchers.Default) {
         runCatching {
             val body = client.post(QUERY_ALL_TERM) {
                 header("Cookie", States.cookie)
@@ -307,6 +402,11 @@ private fun syncCourses(mainScope: CoroutineScope) {
             }
             body
         }.onFailure {
+            if (it is CancellationException) {
+
+            } else {
+                States.syncState = SyncState.FAILED(it)
+            }
             logOut(it.stackTraceToString())
         }.getOrNull()?.runCatching {
             States.terms.clear()
@@ -320,7 +420,6 @@ private fun syncCourses(mainScope: CoroutineScope) {
                 }
             }
             updateLessonList()
-            States.syncState = SyncState.SYNCING
 
             if (States.queryVideos == null) {
                 Object("data").Array("dataList").first().let {
@@ -329,14 +428,16 @@ private fun syncCourses(mainScope: CoroutineScope) {
                     States.lessonNow = "---"
                 }
                 updateVideoList()
-                States.syncState = SyncState.SYNCING
             }
         }?.onFailure {
+            if (it is CancellationException) {
+
+            } else {
+                States.syncState = SyncState.FAILED(it)
+            }
             logOut(it.stackTraceToString())
-        }?.let {
+        }?.onSuccess {
             States.syncState = SyncState.SYNCED
-        } ?: run {
-            States.syncState = SyncState.FAILED()
         }
     }
 }

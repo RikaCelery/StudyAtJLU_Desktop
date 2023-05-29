@@ -17,10 +17,10 @@ import utils.OkHttpUtil
 import java.io.File
 
 val client = HttpClient(OkHttp) {
-    install(Logging) {
-        logger = Logger.SIMPLE
-        level = LogLevel.INFO
-    }
+//    install(Logging) {
+//        logger = Logger.SIMPLE
+//        level = LogLevel.INFO
+//    }
     install(ContentNegotiation) {
         json(Json {
             ignoreUnknownKeys = true
