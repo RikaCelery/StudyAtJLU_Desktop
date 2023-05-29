@@ -48,7 +48,11 @@ compose.desktop {
     application {
         mainClass = "MainKt"
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            windows{
+                perUserInstall = true
+                shortcut = true
+            }
+            targetFormats(TargetFormat.Msi)
             packageName = "StudyAtJLU_Desktop"
             packageVersion = "1.0.0"
         }
