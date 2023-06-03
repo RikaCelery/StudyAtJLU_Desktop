@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>503 Service Unavailable</title>
+    
+    <style type="text/css">
+    .location{
+        margin-top: 5%;
+        padding-right: 15px;
+        padding-left: 15px;
+        margin-right: auto;
+        margin-left: auto;
+    }
+
+    .location-error{
+        margin-top: 5%;
+        padding-right: 15px;
+        padding-left: 15px;
+        margin-right: auto;
+        margin-left: auto;
+    }
+
+    .left{
+        margin-left: 22%;
+    }
+
+    .left-error{
+        margin-left: 30%;
+    }
+
+    .d1{
+        margin-top:20px;
+    }
+
+    .d2{
+        margin-top:10px;
+    }
+
+    .d3{
+        margin-left:20px;
+    }
+
+    .in-title{
+        font-size:25px;
+        color: #FF9900;
+    }
+
+    .in-text{
+        font-size:14px;
+    }
+
+    .in-text-big{
+        font-size:20px;
+    }
+
+    .in-text-normal{
+        font-size:18px;
+    }
+
+    .w1{
+        width: 230px;
+        display: block;
+        float: left;
+    }
+
+    .top1{
+        margin-top:5px;
+    }
+
+    .li-text{
+        font-size: 16px;
+        margin-left: -20px;
+        margin-top: 8px;
+    }
+    
+    .li-text2{
+        font-size: 16px;
+        margin-left: -20px;
+        margin-top: 8px;
+    }
+
+    .bottom1{
+        margin-bottom:30px;
+    }
+
+    .bottom2{
+        margin-bottom:15px;
+    }
+
+    .bottom3{
+        margin-bottom:80px;
+    }
+    
+    .bottom4{
+        margin-bottom:60px;
+    }
+
+    .img-normal{
+        width:10px;
+        height:10px;
+    }
+    
+    .a-text{
+        color:#33CCFF;
+        cursor:pointer;
+    }
+    
+    .detail-text{
+        color: #909090;
+        margin-top: 2px;
+        font-size: 16px;
+        margin-left: 0px;
+    }
+    </style>
+  </head>
+  
+  <body>
+    <div class="location" id="error-page">
+        <div class="left"><span class="in-title">503</span></div>
+        <div class="left d1">
+            <span class="in-text-big">Service Unavailable</span></div>
+        <div class="left d1">
+            <span class="in-text">Error Times: Mon, 29 May 2023 10:07:59 GMT</span>
+        </div>
+        <div class="left d2">
+            <span class="in-text w1">IP: 119.48.45.154</span>
+            <span class="in-text">Node information：PSjszjsx4ho50:0,  PS-TNH-017yD32:3,  wt60:4</span>
+        </div>
+        <div class="left d2">
+            <span class="in-text">URL: https://jwcmedia.jlu.edu.cn/bucket1/2023-05-27/aa9c5314babb43208bf21b4990e4d898.mp4</span>
+        </div>
+        <div class="left d2">
+            <span class="in-text"><A HREF="mailto:"></A></span>
+        </div>
+        <div class="left d2 bottom3">
+            <span class="in-text"> Check:</span>
+            <span class="a-text" onclick="show_en()">Details</span>
+        </div>
+    </div>
+    
+    <div class="location-error" id="detail-page">
+        <div id="detail-en-page" style="display:none">
+            <div class="left"><span class="in-title">ERROR</span></div>
+            <div class="left d1">
+                <span class="in-text-big">The requested URL could not be retrieved</span></div>
+            <div class="left d1">
+                <div class="bottom2"><span class="in-text-normal">While trying to retrieve the URL:</span></div>
+                <pre class="detail-text">https://jwcmedia.jlu.edu.cn/bucket1/2023-05-27/aa9c5314babb43208bf21b4990e4d898.mp4</pre>
+            </div>
+            <div class="left d2">
+                <span class="in-text-normal">The following error was encountered:</span>
+                <ul class="top1">
+                <li class="li-text2 bottom1">Connection Failed</li>
+                </ul>
+                
+            </div>
+            <div class="left d2 bottom1">
+                <p class="in-text-normal">The system returned:</p>
+                <p class="in-text-normal">&nbsp;&nbsp;&nbsp;&nbsp;(11) Resource temporarily unavailable</p>
+                <br>
+                <p class="in-text-normal">The remote host or network may be down.  Please try the request again.</p>
+            </div>
+            
+            <div class="left d2">
+                <span class="in-text-normal"><a class="a-text" href="#" onclick="show_err()">return</a></span>
+            </div>
+        </div>
+    </div>
+    
+  <script type="text/javascript">
+      function show_en(){
+        var error = document.getElementById('error-page');
+        var en = document.getElementById('detail-en-page');
+        en.style.display='block';
+        error.style.display='none';
+      }
+      
+      function show_err(){
+        var error = document.getElementById('error-page');
+        var en = document.getElementById('detail-en-page');
+        en.style.display='none';
+        error.style.display='block';
+      }
+  </script>
+  </body>
+</html>
