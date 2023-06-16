@@ -1,10 +1,10 @@
+
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.utils.io.streams.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import utils.Array
 import utils.Object
@@ -12,7 +12,6 @@ import utils.String
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.io.path.pathString
-
 
 suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resourceId: String, type: Int = 0) {
 
@@ -165,4 +164,9 @@ private suspend fun FileOutputStream.receiveStream(
     }
     logOut()
     logOut("downloaded ${file.toPath()}.normalize().pathString}")
+}
+
+enum class PageState {
+    INDEX,
+    SETTINGS
 }

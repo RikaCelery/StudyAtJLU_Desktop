@@ -1,3 +1,12 @@
+package ui
+
+import PageState
+import QUERY_ALL_TERM
+import QUERY_LIVE_AND_RECORD
+import SettingPage
+import States
+import SyncState
+import TopBar
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import client
+import downloadVideo
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import kotlinx.coroutines.CancellationException
@@ -25,8 +36,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import utils.*
-import java.io.File
-
+import logOut
 suspend fun updateVideoList() {
     States.syncState = SyncState.SYNCING
     require(States.queryVideos != null)
