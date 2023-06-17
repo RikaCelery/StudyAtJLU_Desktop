@@ -9,7 +9,7 @@ object States {
     var videos = mutableStateListOf<JsonObject>()
     var syncState: SyncState by mutableStateOf(SyncState.OUT_DATE)
     var pageState by mutableStateOf(PageState.INDEX)
-    var downloadFolder = File(".").canonicalFile
+    var downloadFolder = File("E:\\课程资料\\学期\\2022-2").let { if (it.exists()) it else File(".") }.canonicalFile
     val progress = mutableStateMapOf<String,Float>()
     val progressInfo = mutableStateMapOf<String,String>()
 

@@ -17,10 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -302,10 +299,15 @@ fun MainPage() {
                                             )
 //
                                             IconButton({
-                                                val uri = folder.resolve("index.html").toURI()
-                                                println(uri)
+                                                val file = folder.resolve("index.html")
+                                                println(file)
+                                                if (file.exists().not()) {
+                                                    runBlocking() {
+                                                        downloadVideo(folder, teacherFile, pcFile, id, 2)
+                                                    }
+                                                }
                                                 try {
-                                                    Desktop.getDesktop().browse(uri)
+                                                    Desktop.getDesktop().browse(file.toURI())
                                                 } catch (e: Exception) {
                                                     e.printStackTrace()
 //                                                    AlertDialog({}, {}, text = { Text("无法打开页面:${e.localizedMessage}") })
