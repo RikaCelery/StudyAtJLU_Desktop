@@ -353,7 +353,7 @@ fun MainPage() {
 
                                             //open folder
                                             IconButton({
-                                                val file = folder.resolve("index.html")
+                                                val file = folder
                                                 println(file)
                                                 try {
                                                     Desktop.getDesktop().open(file)
