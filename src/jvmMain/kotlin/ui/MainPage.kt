@@ -24,8 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import client
-import downloadVideo
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import kotlinx.coroutines.CancellationException
@@ -36,7 +34,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import utils.*
-import logOut
+import java.io.File
+
 suspend fun updateVideoList() {
     States.syncState = SyncState.SYNCING
     require(States.queryVideos != null)
@@ -205,7 +204,7 @@ suspend fun updateLessonList() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable
 @Suppress("FunctionName")
 fun MainPage() {
@@ -287,11 +286,6 @@ fun MainPage() {
                                             //play
                                             val modifier = Modifier.size(40.dp)
                                             val modifier1 = Modifier.padding(5.dp)
-                                            IconButton({
-
-                                            }, modifier) {
-                                                Icon(painterResource("play_arrow.svg"), "download", modifier1)
-                                            }
 
                                             val lessonName =
                                                 lessonInfo.String("lessonName").replace(':', '_').replace("*", "")
@@ -312,7 +306,19 @@ fun MainPage() {
                                                     date.plus(' ').plus(lessonInfo.String("timeRange"))
                                                 } HDMI.mp4"
                                             )
-
+//
+                                            IconButton({
+                                                val uri = folder.resolve("index.html").toURI()
+                                                println(uri)
+                                                try {
+                                                    Desktop.getDesktop().browse(uri)
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+//                                                    AlertDialog({}, {}, text = { Text("无法打开页面:${e.localizedMessage}") })
+                                                }
+                                            }, modifier) {
+                                                Icon(painterResource("play_arrow.svg"), "download", modifier1)
+                                            }
                                             //download use when to switch
                                             if (teacherFile.exists()) IconButton({}, modifier) {
                                                 Icon(painterResource("done_outline.svg"), "download", modifier1)
@@ -352,7 +358,16 @@ fun MainPage() {
                                             }
 
                                             //open folder
-                                            IconButton({}, modifier) {
+                                            IconButton({
+                                                val file = folder
+                                                println(file)
+                                                try {
+                                                    Desktop.getDesktop().open(file)
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+//                                                    AlertDialog({}, {}, text = { Text("无法打开文件夹:${e.localizedMessage}") })
+                                                }
+                                            }, modifier) {
                                                 Icon(painterResource("folder_open.svg"), "folder_open", modifier1)
                                             }
                                         }
@@ -364,7 +379,7 @@ fun MainPage() {
                                                 LinearProgressIndicator(
                                                     it,
                                                     Modifier.height(8.dp).weight(1f),
-                                                    color = Color.hsv(calculateY(it)*120, 1f, 1f)
+                                                    color = Color.hsv(calculateY(it) * 120, 1f, 1f)
                                                 )
                                             } ?: Spacer(Modifier.height(8.dp).weight(1f))
                                             Text(States.progressInfo[id + "_1"] ?: "")
@@ -374,7 +389,7 @@ fun MainPage() {
                                                 LinearProgressIndicator(
                                                     it,
                                                     Modifier.height(8.dp).weight(1f),
-                                                    color = Color.hsv(calculateY(it)*120, 1f, 1f)
+                                                    color = Color.hsv(calculateY(it) * 120, 1f, 1f)
                                                 )
                                             } ?: Spacer(Modifier.height(8.dp).weight(1f))
                                             Text(States.progressInfo[id + "_2"] ?: "")
