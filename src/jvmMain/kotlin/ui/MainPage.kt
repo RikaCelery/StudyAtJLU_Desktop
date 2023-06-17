@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import client
+import downloadVideo
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import kotlinx.coroutines.CancellationException
@@ -33,8 +35,9 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import logOut
 import utils.*
-import java.io.File
+import java.awt.Desktop
 
 suspend fun updateVideoList() {
     States.syncState = SyncState.SYNCING
