@@ -7,7 +7,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import utils.conf.Conf
+import java.io.File
 import javax.swing.JFileChooser
+import javax.swing.filechooser.FileSystemView
 
 @Composable
 fun SettingPage() {
@@ -47,6 +50,7 @@ private fun saveToFile(savePath: String) {
 
 private fun chooseDirectory(): String {
     val chooser = JFileChooser()
+    chooser.currentDirectory = File(Conf.getConf("savepath")).let { if (it.exists()) it else File(".") }
     chooser.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
     val result = chooser.showOpenDialog(null)
 
