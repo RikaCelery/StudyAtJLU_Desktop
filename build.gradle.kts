@@ -38,6 +38,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-websockets:$ktorVersion")
                 implementation(compose.desktop.currentOs)
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines:0.19.2")
+                implementation("com.typesafe:config:1.4.1")
             }
         }
         val jvmTest by getting

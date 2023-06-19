@@ -1,18 +1,14 @@
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.compression.*
 import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
-import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.serialization.kotlinx.xml.*
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
+import ui.MainPage
 import utils.OkHttpUtil
 import java.io.File
 

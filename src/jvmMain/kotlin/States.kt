@@ -5,11 +5,12 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 object States {
+    var conf=utils.conf.Conf
     var currentTerm: String = ""
     var videos = mutableStateListOf<JsonObject>()
     var syncState: SyncState by mutableStateOf(SyncState.OUT_DATE)
     var pageState by mutableStateOf(PageState.INDEX)
-    var downloadFolder = File("E:\\课程资料\\学期\\2022-2").let { if (it.exists()) it else File(".") }.canonicalFile
+    var downloadFolder = File(conf.getConf("savepath")).canonicalFile
     val progress = mutableStateMapOf<String,Float>()
     val progressInfo = mutableStateMapOf<String,String>()
 
