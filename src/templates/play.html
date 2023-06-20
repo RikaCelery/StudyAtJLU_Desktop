@@ -46,12 +46,19 @@
     const videoSourceSelector = document.getElementById('video-source-selector');
     videoSourceSelector.addEventListener('change', function() {
         const selectedSource = videoSourceSelector.value;
+        const currentTime = player.currentTime(); // 获取当前播放时间
+
         player.src({
             type: 'video/mp4',
             src: selectedSource
         });
+
+        player.one('loadedmetadata', function() { // 当新视频源的元数据加载完成时
+            player.currentTime(currentTime); // 将播放时间设置为之前的值
+            player.play();
+        });
+
         player.load();
-        player.play();
     });
 
 </script>
