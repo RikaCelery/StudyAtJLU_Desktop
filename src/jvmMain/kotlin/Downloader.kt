@@ -68,6 +68,7 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
                     }
                 }
             }
+
         } else if (type==1) {
             if (States.tasks.get(resourceId + "_2")?.isActive == true)
                 return@supervisorScope
@@ -95,6 +96,7 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
                     }
                 }
             }
+
         }
     }
     //播放器
@@ -146,22 +148,6 @@ private suspend fun FileOutputStream.receiveStream(
             last = System.currentTimeMillis()
             val packet = channel.readRemaining(DOWNLOAD_BUFFER_SIZE)
             writePacket(packet)
-//            print(buildString {
-//                append("write: ")
-//                if (contentLength != -1L) {
-//                    append("%.2f%%".format(channel.totalBytesRead.times(100.0).div(contentLength)))
-//                } else {
-//                    append("Nan%")
-//                }
-//                append(' ')
-//                append(channel.totalBytesRead)
-//                append('/')
-//                append(contentLength)
-//                append(' ')
-//                val speed = channel.totalBytesRead.times(1f).div(System.currentTimeMillis() - start).times(1000)
-//                append("%.2fMB/s".format(speed.div(UNIT_MB)))
-//                append('\r')
-//            })
             val now = System.currentTimeMillis()
             onProgress(channel.totalBytesRead, contentLength, now - start, now - last)
         }
