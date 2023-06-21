@@ -98,7 +98,7 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
         }
     }
     //播放器
-    val template=File("src/templates/play.html").readText()
+    val template=Thread.currentThread().contextClassLoader.getResourceAsStream("templates/play.html").use { String(it.readBytes()) }
     htmlFile.writeText(
         template
             .replace(
