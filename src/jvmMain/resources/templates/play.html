@@ -7,61 +7,248 @@
 </head>
 
 <body>
-<video id="my-video" class="video-js vjs-theme-city" controls preload="auto" width="640" height="264">
-    <source src="{HDMI}" type="video/mp4" />
-    <source src="{TEACHER}" type="video/mp4" />
-    <p class="vjs-no-js">
-        To view this video please enable JavaScript, and consider upgrading to a web browser that
-        <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
-    </p>
-    <div>
-        <label for="playback-rate">Playback Rate: </label>
-        <input type="number" id="playback-rate" value="1" min="0.5" max="3" step="0.1" />
+    <div class="white-space"></div>
+    <div id="tooltip">00:00 / 00:00</div>
+
+    <div class="selector">
+        <input type="button" value="hdmi" onclick="toggleHdmi();">
+        <input type="button" value="teacher" onclick="toggleTeacher();">
+        <input type="button" value="sync" onclick="syncProgress();">
+        <input type="button" value="syncAndPlayBoth" onclick="syncProgress(1);">
+        <input type="button" value="syncAndPauseBoth" onclick="syncProgress(2);">
+        <input type="button" value="syncToHDMI" onclick='currentVideo = "HDMI";'>
+        <input type="button" value="syncToTeacher" onclick='currentVideo = "TEACHER";'>
+
     </div>
-</video>
 
-<select id="video-source-selector">
-    <option value="{HDMI}">HDMI</option>
-    <option value="{TEACHER}">TEACHER</option>
-</select>
+    <div class="container hdmi-video">
+        <video id="my-video2" class="video-js vjs-theme-city" controls preload="auto" width="640" height="264">
+            <source src="{HDMI}" type="video/mp4" />
+        </video>
+    </div>
 
-<script>
-    const player = videojs("my-video", {
-        playbackRates: [0.5, 1, 1.5, 2,3],
-        controls: true,
-        autoplay: false,
-        preload: 'auto',
-        fluid: true,
-        muted: false,
-        loop: false,
-        aspectRatio: '16:9',
-        controlBar: {
-            volumePanel: {
-                inline: false
+
+
+    <div class="container teacher-video">
+        <video id="my-video" class="video-js vjs-theme-city" controls preload="auto" width="640" height="264">
+            <source src="{TEACHER}" type="video/mp4" />
+        </video>
+    </div>
+    <script>
+        //主视频，用于向其他机位同步进度
+        var currentVideo = "HDMI"
+
+        const hdmiEle = document.querySelector(".hdmi-video")
+        const hdmi = videojs("my-video2", {
+            playbackRates: [0.5, 1, 1.5, 2, 3],
+            controls: true,
+            autoplay: false,
+            preload: 'auto',
+            fluid: true,
+            muted: false,
+            loop: false,
+            aspectRatio: '16:9',
+            controlBar: {
+                volumePanel: {
+                    inline: false
+                }
+            }
+
+        });
+
+        const teacherEle = document.querySelector(".teacher-video")
+        const teacher = videojs("my-video", {
+            playbackRates: [0.5, 1, 1.5, 2, 3],
+            controls: true,
+            autoplay: false,
+            preload: 'auto',
+            fluid: true,
+            muted: false,
+            loop: false,
+            aspectRatio: '16:9',
+            controlBar: {
+                volumePanel: {
+                    inline: false
+                }
+            }
+        });
+
+        teacher.on("progress", function () { if (!teacher.paused()) currentVideo = "TEACHER" })
+        hdmi.on("progress", function () { if (!hdmi.paused()) currentVideo = "HDMI" })
+        setInterval(() => { updateProgress(); updateTooltip() }, 100)
+
+
+        hideTooltip = undefined;
+        document.addEventListener("mousemove", (event) => {
+            clearTimeout(hideTooltip);
+            tooltip.style.opacity = 1;
+            tooltip.style.top = 10 + event.clientY + window.pageYOffset + "px";
+            tooltip.style.left = event.clientX + window.pageXOffset + "px";
+            hideTooltip = setTimeout(() => tooltip.style.opacity = 0, 700);
+        });
+        document.addEventListener("mouseenter", function () {
+            tooltip.style.opacity = 1;
+        });
+        document.addEventListener("mouseleave", () => {
+            tooltip.style.opacity = 0;
+        });
+
+
+
+
+
+        function updateProgress() {
+            if (currentVideo == "HDMI") {
+                let progress = hdmi.currentTime()
+                if (!teacher.paused()) {
+                    if (Math.abs(teacher.currentTime() - progress) > 0.1)
+                        teacher.currentTime(progress)
+                }
+            } else {
+                let progress = teacher.currentTime()
+                if (!hdmi.paused()) {
+                    if (Math.abs(hdmi.currentTime() - progress) > 0.1)
+                        hdmi.currentTime(progress)
+                }
             }
         }
 
-    });
+        function syncProgress(mode) {
+            if (currentVideo == "HDMI") {
+                let progress = hdmi.currentTime()
+                hdmi.volume(1)
+                if (mode == 1) {
+                    if (hdmi.paused())
+                        hdmi.play()
+                    if (teacher.paused())
+                        teacher.play()
+                }
 
-    const videoSourceSelector = document.getElementById('video-source-selector');
-    videoSourceSelector.addEventListener('change', function() {
-        const selectedSource = videoSourceSelector.value;
-        const currentTime = player.currentTime(); // 获取当前播放时间
+                if (mode == 2) {
+                    if (!hdmi.paused())
+                        hdmi.pause()
+                    if (!teacher.paused())
+                        teacher.pause()
+                }
+                if (!teacher.paused())
+                    teacher.currentTime(progress)
+                teacher.volume(0)
+            } else {
+                let progress = teacher.currentTime()
+                teacher.volume(1)
+                if (mode == 1) {
+                    if (hdmi.paused())
+                        hdmi.play()
+                    if (teacher.paused())
+                        teacher.play()
+                }
 
-        player.src({
-            type: 'video/mp4',
-            src: selectedSource
-        });
+                if (mode == 2) {
 
-        player.one('loadedmetadata', function() { // 当新视频源的元数据加载完成时
-            player.currentTime(currentTime); // 将播放时间设置为之前的值
-            player.play();
-        });
+                    if (!hdmi.paused())
+                        hdmi.pause()
+                    if (!teacher.paused())
+                        teacher.pause()
+                }
+                if (!hdmi.paused())
+                    hdmi.currentTime(progress)
+                hdmi.volume(0)
+            }
+        }
 
-        player.load();
-    });
+        function toggleHdmi() {
+            if (hdmiEle.classList.contains("hide")) {
+                hdmi.play()
+                hdmiEle.classList.remove("hide")
+            } else {
+                currentVideo = "TEACHER"
+                hdmi.pause()
+                hdmi.volume(1)
+                hdmiEle.classList.add("hide")
+            }
+        }
 
-</script>
+        function toggleTeacher() {
+            if (teacherEle.classList.contains("hide")) {
+                teacherEle.classList.remove("hide")
+                teacher.play()
+            } else {
+                currentVideo = "HDMI"
+                teacher.pause()
+                teacher.volume(1)
+                teacherEle.classList.add("hide")
+
+            }
+        }
+
+        function formatTime(time) {
+            var minutes = Math.floor(time / 60);
+            var seconds = Math.floor(time % 60);
+            return (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+        };
+
+        function updateTooltip() {
+            var currentTime = formatTime(teacher.currentTime());
+            var duration = formatTime(teacher.duration());
+            if (currentVideo == "HDMI") {
+
+                currentTime = formatTime(hdmi.currentTime());
+                duration = formatTime(hdmi.duration());
+            }
+            tooltip.textContent = currentTime + "/" + duration;
+        };
+    </script>
 </body>
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    .videos {
+        height: 100vh;
+        width: 100vw;
+    }
+
+    .hide {
+        display: none;
+    }
+
+    .selector {
+        position: absolute;
+        top: 0;
+        margin: 0;
+        padding: 0;
+    }
+
+    input {
+        margin: 0;
+    }
+
+    .white-space {
+        height: 26px;
+    }
+
+    #tooltip {
+        position: absolute;
+        padding: 5px;
+        background-color: rgba(0, 0, 0, 0.192);
+        color: white;
+        font-size: 12px;
+        opacity: 0;
+        z-index: 10;
+        pointer-events: none;
+        border-radius: 20px;
+        transition: opacity ease 0.3s;
+    }
+
+    ::-webkit-scrollbar {
+        display: none;
+    }
+</style>
 
 </html>
