@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+</head>
+
+<body>
+    <div class="white-space"></div>
+    <div id="tooltip">00:00 / 00:00</div>
+
+    <div class="selector">
+        <input type="button" value="hdmi" onclick="toggleHdmi();">
+        <input type="button" value="teacher" onclick="toggleTeacher();">
+        <input type="button" value="sync" onclick="syncProgress();">
+        <input type="button" value="syncAndPlayBoth" onclick="syncProgress(1);">
+        <input type="button" value="syncAndPauseBoth" onclick="syncProgress(2);">
+        <input type="button" value="syncToHDMI" onclick='currentVideo = "HDMI";'>
+        <input type="button" value="syncToTeacher" onclick='currentVideo = "TEACHER";'>
+        <input type="range" id="progressBar1" min="0" max="100" step="0.1" value="0" oninput="seekTo(this.value)">
+    </div>
+
+    <div class="container" id="videos">
+        <video id="my-video2" class="video-js vjs-theme-city" controls preload="auto" muted autoplay>
+            <source src="2023-04-14 09点55-11点30 HDMI.mp4" type="video/mp4" />
+        </video>
+        <video id="my-video" class="video-js vjs-theme-city" controls preload="auto" muted autoplay>
+            <source src="2023-04-14 09点55-11点30 2023-04-14 教师机位.mp4" type="video/mp4"  />
+        </video>
+    </div>
+    <script>
+        //主视频，用于向其他机位同步进度
+        var currentVideo = "HDMI"
+
+        const hdmiEle = document.querySelector("#my-video2")
+        const hdmi = document.querySelector("#my-video2")
+
+        const teacherEle = document.querySelector("#my-video")
+        const teacher = document.querySelector("#my-video")
+
+        var progressBar = document.querySelector(".selector");
+        progressBar.focus();
+        teacher.addEventListener("progress", function () { currentVideo = "TEACHER"; updateProgress(); })
+        hdmi.addEventListener("progress", function () { currentVideo = "HDMI"; updateProgress(); })
+        hdmi.addEventListener("timeupdate", () => {
+            if (currentVideo == "HDMI") {
+                let progress = hdmi.currentTime
+                if (Math.abs(teacher.currentTime - progress) > 0.5)
+                    teacher.currentTime = (progress)
+            }
+        })
+        teacher.addEventListener("timeupdate", () => {
+            if (currentVideo == "TEACHER"){
+                let progress = teacher.currentTime
+                if (Math.abs(hdmi.currentTime - progress) > 0.5)
+                    hdmi.currentTime = (progress)
+            }
+        })
+        setInterval(() => { updateTooltip() }, 500)
+        hideTooltip = undefined;
+        document.addEventListener("mousemove", (event) => {
+            clearTimeout(hideTooltip);
+            tooltip.style.opacity = 1;
+            progressBar.style.top = window.pageYOffset + "px";
+            tooltip.style.top = 10 + event.clientY + window.pageYOffset + "px";
+            tooltip.style.left = event.clientX + window.pageXOffset + "px";
+            hideTooltip = setTimeout(() => tooltip.style.opacity = 0, 700);
+        });
+        document.addEventListener("mouseenter", function () {
+            tooltip.style.opacity = 1;
+        });
+        document.addEventListener("mouseleave", () => {
+            tooltip.style.opacity = 0;
+        });
+
+
+        document.addEventListener("scroll", (event) => {
+            console.log("qqqq");
+            progressBar.style.top = window.pageYOffset + "px";
+        });
+
+
+        function seekTo(value) {
+            if (currentVideo == "HDMI") {
+                let progress = hdmi.currentTime
+                let timeToSeek = (value / 100) * hdmi.duration;
+                hdmi.currentTime = timeToSeek;
+                teacher.currentTime = timeToSeek;
+            } else {
+                let progress = teacher.currentTime
+                let timeToSeek = (value / 100) * teacher.duration;
+                hdmi.currentTime = timeToSeek;
+                teacher.currentTime = timeToSeek;
+            }
+        };
+
+        function updateProgress() {
+            if (currentVideo == "HDMI") {
+                let progress = hdmi.currentTime
+                if (Math.abs(teacher.currentTime - progress) > 0.1)
+                    teacher.currentTime = (progress)
+            } else {
+                let progress = teacher.currentTime
+                if (Math.abs(hdmi.currentTime - progress) > 0.1)
+                    hdmi.currentTime = (progress)
+            }
+        }
+
+        function syncProgress(mode) {
+            if (currentVideo == "HDMI") {
+                let progress = hdmi.currentTime
+                hdmi.volume = (1)
+                if (mode == 1) {
+                    if (hdmi.paused)
+                        hdmi.play()
+                    if (teacher.paused)
+                        teacher.play()
+                }
+
+                if (mode == 2) {
+                    if (!hdmi.paused)
+                        hdmi.pause()
+                    if (!teacher.paused)
+                        teacher.pause()
+                }
+                teacher.currentTime = (progress)
+                teacher.volume = (0)
+            } else {
+                let progress = teacher.currentTime
+                teacher.volume = (1)
+                if (mode == 1) {
+                    if (hdmi.paused)
+                        hdmi.play()
+                    if (teacher.paused)
+                        teacher.play()
+                }
+
+                if (mode == 2) {
+
+                    if (!hdmi.paused)
+                        hdmi.pause()
+                    if (!teacher.paused)
+                        teacher.pause()
+                }
+                hdmi.currentTime = (progress)
+                hdmi.volume = (0)
+            }
+        }
+
+        function toggleHdmi() {
+            if (hdmiEle.classList.contains("hide")) {
+                hdmi.play()
+                hdmi.volume=(1)
+                hdmiEle.classList.remove("hide")
+            } else {
+                currentVideo = "TEACHER"
+                hdmi.pause()
+                hdmi.volume=(0)
+                hdmiEle.classList.add("hide")
+            }
+        }
+
+        function toggleTeacher() {
+            if (teacherEle.classList.contains("hide")) {
+                teacherEle.classList.remove("hide")
+                teacher.volume=(1)
+                teacher.play()
+            } else {
+                currentVideo = "HDMI"
+                teacher.pause()
+                teacher.volume=(0)
+                teacherEle.classList.add("hide")
+            }
+        }
+
+        function formatTime(time) {
+            var minutes = Math.floor(time / 60);
+            var seconds = Math.floor(time % 60);
+            return (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+        };
+
+        function updateTooltip() {
+            var currentTime = formatTime(teacher.currentTime);
+            var duration = formatTime(teacher.duration);
+            if (currentVideo == "HDMI") {
+
+                currentTime = formatTime(hdmi.currentTime);
+                duration = formatTime(hdmi.duration);
+            }
+            tooltip.textContent = currentTime + "/" + duration;
+        };
+    </script>
+</body>
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+
+    .container {
+        width: 100vw;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .hide {
+        display: none;
+    }
+
+    .selector {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        position: absolute;
+        top: 0;
+        margin: 0;
+        padding: 0;
+        z-index: 10;
+        background-color: white;
+    }
+
+    .container {
+        width: 100%;
+        height: max-content;
+        flex-grow: 1;
+    }
+
+    video {
+        width: 100%;
+        flex-grow: 1;
+    }
+
+    #progressBar1 {
+        width: 100%;
+    }
+
+    input {
+        margin: 0;
+    }
+
+    .white-space {
+        height: 40px;
+        width: 10px;
+        flex-shrink: 0;
+    }
+
+    #tooltip {
+        position: absolute;
+        padding: 5px;
+        background-color: rgba(0, 0, 0, 0.192);
+        color: white;
+        font-size: 12px;
+        opacity: 0;
+        z-index: 10;
+        pointer-events: none;
+        border-radius: 20px;
+        transition: opacity ease 0.3s;
+    }
+
+    ::-webkit-scrollbar {
+        display: none;
+    }
+</style>
+
+</html>
