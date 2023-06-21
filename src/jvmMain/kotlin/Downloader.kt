@@ -98,7 +98,7 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
         }
     }
     //播放器
-    val template=Thread.currentThread().contextClassLoader.getResourceAsStream("templates/play.html").use { String(it.readBytes()) }
+    val template=Thread.currentThread().contextClassLoader.getResourceAsStream("templates/play.html")!!.use { String(it.readBytes()) }
     htmlFile.writeText(
         template
             .replace(
@@ -141,7 +141,7 @@ private suspend fun FileOutputStream.receiveStream(
     val contentLength = httpResponse.contentLength() ?: -1L
     val start = System.currentTimeMillis()
     withContext(Dispatchers.IO) {
-        var last = start
+        var last: Long
         while (!channel.isClosedForRead) {
             last = System.currentTimeMillis()
             val packet = channel.readRemaining(DOWNLOAD_BUFFER_SIZE)
