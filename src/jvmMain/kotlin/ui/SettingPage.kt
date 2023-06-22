@@ -7,10 +7,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.jetbrains.exposed.sql.Database
 import utils.conf.Conf
+import utils.getSavePathFromDB
 import java.io.File
 import javax.swing.JFileChooser
-import javax.swing.filechooser.FileSystemView
 
 @Composable
 fun SettingPage() {
@@ -35,22 +36,17 @@ fun SettingPage() {
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Button(onClick = { saveToFile(savePath) }) {
+        Button(onClick = { Conf.setSavePath(savePath) }) {
             Text(text = "保存")
         }
     }
 }
 
-private fun saveToFile(savePath: String) {
-    val conf =utils.conf.Conf
-    if (savePath.isNotEmpty()) {
-        conf.setConf("savepath",savePath)
-    }
-}
 
 private fun chooseDirectory(): String {
     val chooser = JFileChooser()
-    chooser.currentDirectory = File(Conf.getConf("savepath")).let { if (it.exists()) it else File(".") }
+    Database.connect("jdbc:sqlite:data.db", "org.sqlite.JDBC")
+    chooser.currentDirectory = File(getSavePathFromDB()).let { if (it.exists()) it else File(".") }
     chooser.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
     val result = chooser.showOpenDialog(null)
 

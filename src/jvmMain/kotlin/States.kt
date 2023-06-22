@@ -1,16 +1,20 @@
+
 import androidx.compose.runtime.*
 import kotlinx.coroutines.Job
 import kotlinx.serialization.json.JsonObject
+import utils.getSavePathFromDB
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 object States {
-    var conf=utils.conf.Conf
     var currentTerm: String = ""
     var videos = mutableStateListOf<JsonObject>()
     var syncState: SyncState by mutableStateOf(SyncState.OUT_DATE)
     var pageState by mutableStateOf(PageState.INDEX)
-    var downloadFolder = File(conf.getConf("savepath")).canonicalFile
+    var downloadFolder :File=File(".").canonicalFile
+        get() = File(getSavePathFromDB()).canonicalFile
+
+
     val progress = mutableStateMapOf<String,Float>()
     val progressInfo = mutableStateMapOf<String,String>()
 

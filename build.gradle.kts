@@ -39,6 +39,11 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines:0.19.2")
                 implementation("com.typesafe:config:1.4.1")
+
+                implementation("org.jetbrains.exposed:exposed-core:0.36.2")
+                implementation("org.jetbrains.exposed:exposed-dao:0.36.2")
+                implementation("org.jetbrains.exposed:exposed-jdbc:0.36.2")
+                implementation("org.xerial:sqlite-jdbc:3.36.0.3")
             }
         }
         val jvmTest by getting

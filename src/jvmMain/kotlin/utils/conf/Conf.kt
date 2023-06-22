@@ -1,32 +1,21 @@
 package utils.conf
 
-import logOut
-import java.io.File
+import utils.createTable
+import utils.getSavePathFromDB
+import utils.setupDatabase
+import utils.updateSavePath
 
 object Conf {
-    private val home = System.getProperty("user.home")
-    private val configFile = File(home, ".downloader.conf")
-    private val config: MutableMap<String, String> = mutableMapOf()
-
+    private var savePath:String?=null
     init {
-        if (configFile.exists()) {
-            configFile.readLines().forEach {
-                val (key, value) = it.split("=")
-                config[key] = value
-            }
-        }else{
-            configFile.createNewFile()
-            setConf("savepath",".")
-        }
+        createTable()
+        setupDatabase()
+        savePath= getSavePathFromDB()
+        println("save path is $savePath")
     }
-
-    fun setConf(key: String, value: String) {
-        config[key] = value
-        configFile.writeText(config.map { "${it.key}=${it.value}" }.joinToString("\n"))
-        logOut("$key set to $value")
-    }
-
-    fun getConf(key: String): String? {
-        return config[key]
+    fun setSavePath(string: String){
+        savePath=string
+        updateSavePath(string)
+        println("set save path to $savePath")
     }
 }
