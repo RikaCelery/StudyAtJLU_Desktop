@@ -1,4 +1,3 @@
-
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -13,7 +12,7 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlin.io.path.pathString
 
-suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resourceId: String, type: Int = 0) {
+suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourceId: String, type: Int = 0) {
 
     val info = runCatching {
         client.get(QUERY_VIDEO_INFO) {
@@ -44,13 +43,11 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
                 return@supervisorScope
             States.tasks[resourceId + "_1"] = launch {
                 runCatching {
-                    downloadToFile(teacherFile, teacherUrl) { current, total, totalTime, time ->
+                    downloadToFile(teacherFile, teacherUrl) { current, total, totalTime, _, startBytes ->
                         if (total != -1L) {
-                            val progress = current.times(1f).div(total)
+                            val progress = current.plus(startBytes).times(1f).div(total.plus(startBytes))
                             States.progress[resourceId + "_1"] = progress
-
                             val speed = current.times(1f).div(totalTime).times(1000)
-
                             States.progressInfo[resourceId + "_1"] =
                                 "%.2f%% %.2fMB/s".format(progress * 100, speed.div(UNIT_MB))
                         }
@@ -68,14 +65,14 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
                     }
                 }
             }
-        } else if (type==1) {
+        } else if (type == 1) {
             if (States.tasks.get(resourceId + "_2")?.isActive == true)
                 return@supervisorScope
             States.tasks[resourceId + "_2"] = launch {
                 runCatching {
-                    downloadToFile(pcFile, pcUrl) { current, total, totalTime, time ->
+                    downloadToFile(pcFile, pcUrl) { current, total, totalTime, _, startBytes ->
                         if (total != -1L) {
-                            val progress = current.times(1f).div(total)
+                            val progress = current.plus(startBytes).times(1f).div(total.plus(startBytes))
                             States.progress[resourceId + "_2"] = progress
                             val speed = current.times(1f).div(totalTime).times(1000)
                             States.progressInfo[resourceId + "_2"] =
@@ -98,8 +95,10 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
         }
     }
     //播放器
+    val template = Thread.currentThread().contextClassLoader.getResourceAsStream("templates/play.html")!!
+        .use { String(it.readBytes()) }
     htmlFile.writeText(
-        """<head><title></title><meta charset="UTF-8"/></head><body><div id="tooltip">00:00 / 00:00</div><div class="container" id="videos"><div class="hdmi"><video src="{HDMI}" id="hdmi" ontimeupdate="updateProgressBar()"></video><input type="range" id="progressBar1" min="0" max="100" step="0.1" value="0" oninput="seekTo(this.value)"></div><div class="teacher"><video src="{TEACHER}" muted id="teacher"></video></div></div></body><script>var tooltip=document.getElementById("tooltip");document.addEventListener("keydown",function(event){if(event.code==="Space"){togglePlay();event.preventDefault();};});var video=document.getElementById("hdmi");var video2=document.getElementById("teacher");var progressBar=document.getElementById("progressBar1");progressBar.focus();if(video.duration.toString()=='NaN')video2.removeAttribute("muted");function updateTooltip(){var currentTime=formatTime(video.currentTime);var duration=formatTime(video.duration);tooltip.textContent=currentTime+"/"+duration;};setTimeout(updateTooltip,2000);video.addEventListener("timeupdate",updateTooltip);hideTooltip=undefined;document.addEventListener("mousemove",(event)=>{clearTimeout(hideTooltip);tooltip.style.opacity=1;tooltip.style.top=10+event.clientY+window.pageYOffset+"px";tooltip.style.left=event.clientX+window.pageXOffset+"px";hideTooltip=setTimeout(()=>tooltip.style.opacity=0,700);});document.addEventListener("mouseenter",function(){tooltip.style.opacity=1;});document.addEventListener("mouseleave",()=>{tooltip.style.opacity=0;});function formatTime(time){var minutes=Math.floor(time/60);var seconds=Math.floor(time%60);return(minutes<10?"0":"")+minutes+":"+(seconds<10?"0":"")+seconds;};function updateProgressBar(){var currentTime=(video.currentTime/video.duration)*100;progressBar.value=currentTime;};function seekTo(value){var timeToSeek=(value/100)*video.duration;video.currentTime=timeToSeek;video2.currentTime=timeToSeek;};function togglePlay(){var video1=document.getElementById("hdmi");if(video1.paused){video1.play();}else{video1.pause();};var video2=document.getElementById("teacher");if(video2.paused){video2.play();}else{video2.pause();};};progressBar.addEventListener("focusout",function(){progressBar.focus()})</script><style>*{padding:0;margin:0;box-sizing:border-box;}body{background-color:black;}::-webkit-scrollbar{display:none;}.container{width:100vw;height:100vh;display:flex;flex-wrap:wrap;}#tooltip{position:absolute;padding:5px;background-color:rgba(0,0,0,0.383);color:white;font-size:12px;opacity:0;pointer-events:none;border-radius:20px;transition:opacityease0.3s;}video,input{width:100%;flex-grow:1;}</style>"""
+        template
             .replace(
                 "{HDMI}", pcFile.toRelativeString(folder)
             ).replace("{TEACHER}", teacherFile.toRelativeString(folder))
@@ -109,20 +108,21 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
 suspend fun downloadToFile(
     finalFile: File,
     url: Url,
-    onProgress: (current: Long, total: Long, totalTimeCost: Long, currentTimeCost: Long) -> Unit = { _, _, _, _ -> },
+    onProgress: (current: Long, total: Long, totalTimeCost: Long, currentTimeCost: Long, stratBytes: Long) -> Unit = { _, _, _, _, _ -> },
 
     ) {
     val tmpFile = finalFile.parentFile.resolve("${finalFile.name}.tmp")
     if (finalFile.exists()) return
-    if (tmpFile.exists()) tmpFile.delete()
+    var startBytes = 0L
+    if (tmpFile.exists()) {
+        startBytes = tmpFile.length()
+    }
     withContext(Dispatchers.IO) {
-        tmpFile.outputStream().use {
-            client.prepareGet(url) {}.execute { httpResponse ->
-                try {
-                    it.receiveStream(httpResponse, finalFile, onProgress)
-                } catch (e: CancellationException) {
-                    tmpFile.delete()
-                }
+        FileOutputStream(tmpFile, true).use {
+            client.prepareGet(url) {
+                header("Range", "bytes=$startBytes-")
+            }.execute { httpResponse ->
+                it.receiveStream(httpResponse, startBytes, finalFile, onProgress)
             }
         }
         tmpFile.renameTo(finalFile)
@@ -132,41 +132,26 @@ suspend fun downloadToFile(
 
 private suspend fun FileOutputStream.receiveStream(
     httpResponse: HttpResponse,
+    startBytes: Long,
     file: File,
-    onProgress: (current: Long, total: Long, totalTimeCost: Long, currentTimeCost: Long) -> Unit = { _, _, _, _ -> },
+    onProgress: (current: Long, total: Long, totalTimeCost: Long, currentTimeCost: Long, stratBytes: Long) -> Unit = { _, _, _, _, _ -> },
 ) {
     val channel = httpResponse.bodyAsChannel()
     logOut("downloading ${(file.toPath()).normalize().pathString}")
     val contentLength = httpResponse.contentLength() ?: -1L
     val start = System.currentTimeMillis()
     withContext(Dispatchers.IO) {
-        var last = start
+        var last: Long
         while (!channel.isClosedForRead) {
             last = System.currentTimeMillis()
             val packet = channel.readRemaining(DOWNLOAD_BUFFER_SIZE)
             writePacket(packet)
-//            print(buildString {
-//                append("write: ")
-//                if (contentLength != -1L) {
-//                    append("%.2f%%".format(channel.totalBytesRead.times(100.0).div(contentLength)))
-//                } else {
-//                    append("Nan%")
-//                }
-//                append(' ')
-//                append(channel.totalBytesRead)
-//                append('/')
-//                append(contentLength)
-//                append(' ')
-//                val speed = channel.totalBytesRead.times(1f).div(System.currentTimeMillis() - start).times(1000)
-//                append("%.2fMB/s".format(speed.div(UNIT_MB)))
-//                append('\r')
-//            })
             val now = System.currentTimeMillis()
-            onProgress(channel.totalBytesRead, contentLength, now - start, now - last)
+            onProgress(channel.totalBytesRead, contentLength, now - start, now - last, startBytes)
         }
     }
     logOut()
-    logOut("downloaded ${file.toPath()}.normalize().pathString}")
+    logOut("downloaded ${file.toPath().normalize().pathString}")
 }
 
 enum class PageState {
