@@ -61,6 +61,7 @@ suspend fun updateVideoList() {
     }?.getOrNull()?.runCatching {
         States.videos.clear()
         States.videos.addAll(map {
+
             buildJsonObject {
                 put("lessonName", it.String("courseName"))
                 put("date", it.String("scheduleTimeStart").substringBefore(' '))
