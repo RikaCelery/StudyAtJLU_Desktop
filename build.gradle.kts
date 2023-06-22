@@ -56,7 +56,9 @@ compose.desktop {
                 shortcut = true
             }
             targetFormats(TargetFormat.Msi)
-            packageName = "StudyAtJLU_Desktop"
+            packageName = "StudyAtJLU_Desktop"+version.toString().substringAfter('-',"").let {
+                if (it.isNotEmpty()) "_$it" else it
+            }
             packageVersion = version.toString().substringBefore('-')
         }
     }
