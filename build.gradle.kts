@@ -8,7 +8,7 @@ plugins {
 group = "rikacelery.github.io"
 //MAJOR.MINOR.BUILD
 //255.255.65535
-version = "1.1.0-alpha"
+version = "1.0.2"
 
 repositories {
     google()
