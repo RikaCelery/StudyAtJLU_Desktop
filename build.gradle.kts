@@ -6,7 +6,9 @@ plugins {
 }
 
 group = "rikacelery.github.io"
-version = "1.0.1"
+//MAJOR.MINOR.BUILD
+//255.255.65535
+version = "1.1.0-alpha"
 
 repositories {
     google()
@@ -55,7 +57,7 @@ compose.desktop {
             }
             targetFormats(TargetFormat.Msi)
             packageName = "StudyAtJLU_Desktop"
-            packageVersion = "1.0.1"
+            packageVersion = version.toString().substringBefore('-')
         }
     }
 }
