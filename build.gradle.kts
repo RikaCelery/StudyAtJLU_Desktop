@@ -51,12 +51,19 @@ compose.desktop {
     application {
         mainClass = "MainKt"
         nativeDistributions {
-            windows{
+            windows {
                 perUserInstall = true
                 shortcut = true
             }
-            targetFormats(TargetFormat.Msi)
-            packageName = "StudyAtJLU_Desktop"+version.toString().substringAfter('-',"").let {
+            macOS {
+                dockName = "StudyAtJLU_Desktop" + version.toString().substringAfter('-', "").let {
+                    if (it.isNotEmpty()) "_$it" else it
+                }
+                pkgPackageVersion = version.toString().substringBeforeLast('.')
+                pkgPackageBuildVersion = version.toString().substringAfterLast('.').substringBefore('-')
+            }
+            targetFormats(TargetFormat.Msi,TargetFormat.Dmg)
+            packageName = "StudyAtJLU_Desktop" + version.toString().substringAfter('-', "").let {
                 if (it.isNotEmpty()) "_$it" else it
             }
             packageVersion = version.toString().substringBefore('-')
