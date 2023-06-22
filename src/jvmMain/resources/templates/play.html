@@ -73,8 +73,8 @@
             }
         });
 
-        teacher.on("progress", function () { if (!teacher.paused()) currentVideo = "TEACHER" })
-        hdmi.on("progress", function () { if (!hdmi.paused()) currentVideo = "HDMI" })
+        teacherEle.addEventListener("mouseover", function () { if (!teacher.paused()) currentVideo = "TEACHER" })
+        hdmiEle.addEventListener("mouseover", function () { if (!hdmi.paused()) currentVideo = "HDMI" })
         setInterval(() => { updateProgress(); updateTooltip() }, 100)
 
 
@@ -159,11 +159,15 @@
         function toggleHdmi() {
             if (hdmiEle.classList.contains("hide")) {
                 hdmi.play()
+                if (teacherEle.classList.contains("hide"))
+                    hdmi.volume(1)
                 hdmiEle.classList.remove("hide")
+                hdmi,play()
             } else {
                 currentVideo = "TEACHER"
                 hdmi.pause()
-                hdmi.volume(1)
+                teacher.volume(1)
+                hdmi.volume(0)
                 hdmiEle.classList.add("hide")
             }
         }
@@ -171,11 +175,14 @@
         function toggleTeacher() {
             if (teacherEle.classList.contains("hide")) {
                 teacherEle.classList.remove("hide")
+                if (hdmiEle.classList.contains("hide"))
+                    teacher.volume(1)
                 teacher.play()
             } else {
                 currentVideo = "HDMI"
                 teacher.pause()
-                teacher.volume(1)
+                hdmi.volume(1)
+                teacher.volume(0)
                 teacherEle.classList.add("hide")
 
             }
