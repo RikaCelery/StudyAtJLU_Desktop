@@ -1,4 +1,3 @@
-
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -13,7 +12,7 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlin.io.path.pathString
 
-suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resourceId: String, type: Int = 0) {
+suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourceId: String, type: Int = 0) {
 
     val info = runCatching {
         client.get(QUERY_VIDEO_INFO) {
@@ -44,13 +43,11 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
                 return@supervisorScope
             States.tasks[resourceId + "_1"] = launch {
                 runCatching {
-                    downloadToFile(teacherFile, teacherUrl) { current, total, totalTime, time ->
+                    downloadToFile(teacherFile, teacherUrl) { current, total, totalTime, _, startBytes ->
                         if (total != -1L) {
-                            val progress = current.times(1f).div(total)
+                            val progress = current.plus(startBytes).times(1f).div(total.plus(startBytes))
                             States.progress[resourceId + "_1"] = progress
-
                             val speed = current.times(1f).div(totalTime).times(1000)
-
                             States.progressInfo[resourceId + "_1"] =
                                 "%.2f%% %.2fMB/s".format(progress * 100, speed.div(UNIT_MB))
                         }
@@ -68,15 +65,14 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
                     }
                 }
             }
-
-        } else if (type==1) {
+        } else if (type == 1) {
             if (States.tasks.get(resourceId + "_2")?.isActive == true)
                 return@supervisorScope
             States.tasks[resourceId + "_2"] = launch {
                 runCatching {
-                    downloadToFile(pcFile, pcUrl) { current, total, totalTime, time ->
+                    downloadToFile(pcFile, pcUrl) { current, total, totalTime, _, startBytes ->
                         if (total != -1L) {
-                            val progress = current.times(1f).div(total)
+                            val progress = current.plus(startBytes).times(1f).div(total.plus(startBytes))
                             States.progress[resourceId + "_2"] = progress
                             val speed = current.times(1f).div(totalTime).times(1000)
                             States.progressInfo[resourceId + "_2"] =
@@ -100,7 +96,8 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
         }
     }
     //播放器
-    val template=File("src/templates/play.html").readText()
+    val template = Thread.currentThread().contextClassLoader.getResourceAsStream("templates/play.html")!!
+        .use { String(it.readBytes()) }
     htmlFile.writeText(
         template
             .replace(
@@ -112,20 +109,21 @@ suspend fun downloadVideo(folder:File, teacherFile: File, pcFile: File, resource
 suspend fun downloadToFile(
     finalFile: File,
     url: Url,
-    onProgress: (current: Long, total: Long, totalTimeCost: Long, currentTimeCost: Long) -> Unit = { _, _, _, _ -> },
+    onProgress: (current: Long, total: Long, totalTimeCost: Long, currentTimeCost: Long, stratBytes: Long) -> Unit = { _, _, _, _, _ -> },
 
     ) {
     val tmpFile = finalFile.parentFile.resolve("${finalFile.name}.tmp")
     if (finalFile.exists()) return
-    if (tmpFile.exists()) tmpFile.delete()
+    var startBytes = 0L
+    if (tmpFile.exists()) {
+        startBytes = tmpFile.length()
+    }
     withContext(Dispatchers.IO) {
-        tmpFile.outputStream().use {
-            client.prepareGet(url) {}.execute { httpResponse ->
-                try {
-                    it.receiveStream(httpResponse, finalFile, onProgress)
-                } catch (e: CancellationException) {
-                    tmpFile.delete()
-                }
+        FileOutputStream(tmpFile, true).use {
+            client.prepareGet(url) {
+                header("Range", "bytes=$startBytes-")
+            }.execute { httpResponse ->
+                it.receiveStream(httpResponse, startBytes, finalFile, onProgress)
             }
         }
         tmpFile.renameTo(finalFile)
@@ -135,25 +133,26 @@ suspend fun downloadToFile(
 
 private suspend fun FileOutputStream.receiveStream(
     httpResponse: HttpResponse,
+    startBytes: Long,
     file: File,
-    onProgress: (current: Long, total: Long, totalTimeCost: Long, currentTimeCost: Long) -> Unit = { _, _, _, _ -> },
+    onProgress: (current: Long, total: Long, totalTimeCost: Long, currentTimeCost: Long, stratBytes: Long) -> Unit = { _, _, _, _, _ -> },
 ) {
     val channel = httpResponse.bodyAsChannel()
     logOut("downloading ${(file.toPath()).normalize().pathString}")
     val contentLength = httpResponse.contentLength() ?: -1L
     val start = System.currentTimeMillis()
     withContext(Dispatchers.IO) {
-        var last = start
+        var last: Long
         while (!channel.isClosedForRead) {
             last = System.currentTimeMillis()
             val packet = channel.readRemaining(DOWNLOAD_BUFFER_SIZE)
             writePacket(packet)
             val now = System.currentTimeMillis()
-            onProgress(channel.totalBytesRead, contentLength, now - start, now - last)
+            onProgress(channel.totalBytesRead, contentLength, now - start, now - last, startBytes)
         }
     }
     logOut()
-    logOut("downloaded ${file.toPath()}.normalize().pathString}")
+    logOut("downloaded ${file.toPath().normalize().pathString}")
 }
 
 enum class PageState {
