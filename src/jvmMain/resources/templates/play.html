@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 
 <head>
     <link href="https://vjs.zencdn.net/7.11.4/video-js.min.css" rel="stylesheet" />
     <script src="https://vjs.zencdn.net/7.11.4/video.min.js"></script>
+    <title>学在吉大</title>
 </head>
 
 <body>
@@ -36,7 +37,9 @@
     </div>
     <script>
         //主视频，用于向其他机位同步进度
-        var currentVideo = "HDMI"
+        let currentVideo = "HDMI";
+        const tooltip = document.querySelector("#tooltip");
+        let hideTooltip = undefined;
 
         const hdmiEle = document.querySelector(".hdmi-video")
         const hdmi = videojs("my-video2", {
@@ -75,30 +78,27 @@
 
         teacherEle.addEventListener("mouseover", function () { if (!teacher.paused()) currentVideo = "TEACHER" })
         hdmiEle.addEventListener("mouseover", function () { if (!hdmi.paused()) currentVideo = "HDMI" })
+
         setInterval(() => { updateProgress(); updateTooltip() }, 100)
-
-
-        hideTooltip = undefined;
         document.addEventListener("mousemove", (event) => {
             clearTimeout(hideTooltip);
-            tooltip.style.opacity = 1;
-            tooltip.style.top = 10 + event.clientY + window.pageYOffset + "px";
-            tooltip.style.left = event.clientX + window.pageXOffset + "px";
-            hideTooltip = setTimeout(() => tooltip.style.opacity = 0, 700);
+            tooltip.style.opacity = "1";
+            tooltip.style.top = 10 + event.clientY + window.scrollY + "px";
+            tooltip.style.left = event.clientX + window.scrollX + "px";
+            hideTooltip = setTimeout(() => tooltip.style.opacity = "0", 700);
         });
         document.addEventListener("mouseenter", function () {
-            tooltip.style.opacity = 1;
+            tooltip.style.opacity = "1";
         });
         document.addEventListener("mouseleave", () => {
-            tooltip.style.opacity = 0;
+            tooltip.style.opacity = "0";
         });
 
-
-
-
-
+        /**
+         * 将主视频的进度同步至另一个视频
+         */
         function updateProgress() {
-            if (currentVideo == "HDMI") {
+            if (currentVideo === "HDMI") {
                 let progress = hdmi.currentTime()
                 if (!teacher.paused()) {
                     if (Math.abs(teacher.currentTime() - progress) > 0.1)
@@ -113,18 +113,21 @@
             }
         }
 
+        /**
+         * 同步两个机位进度
+         * @param mode 1表示同步后全部播放，2表示同步后全部暂停 否则和函数 updateProgress() 作用相同
+         */
         function syncProgress(mode) {
-            if (currentVideo == "HDMI") {
+            if (currentVideo === "HDMI") {
                 let progress = hdmi.currentTime()
                 hdmi.volume(1)
-                if (mode == 1) {
+                if (mode === 1) {
                     if (hdmi.paused())
                         hdmi.play()
                     if (teacher.paused())
                         teacher.play()
                 }
-
-                if (mode == 2) {
+                if (mode === 2) {
                     if (!hdmi.paused())
                         hdmi.pause()
                     if (!teacher.paused())
@@ -136,15 +139,13 @@
             } else {
                 let progress = teacher.currentTime()
                 teacher.volume(1)
-                if (mode == 1) {
+                if (mode === 1) {
                     if (hdmi.paused())
                         hdmi.play()
                     if (teacher.paused())
                         teacher.play()
                 }
-
-                if (mode == 2) {
-
+                if (mode === 2) {
                     if (!hdmi.paused())
                         hdmi.pause()
                     if (!teacher.paused())
@@ -162,7 +163,7 @@
                 if (teacherEle.classList.contains("hide"))
                     hdmi.volume(1)
                 hdmiEle.classList.remove("hide")
-                hdmi,play()
+                hdmi.play()
             } else {
                 currentVideo = "TEACHER"
                 hdmi.pause()
@@ -189,21 +190,20 @@
         }
 
         function formatTime(time) {
-            var minutes = Math.floor(time / 60);
-            var seconds = Math.floor(time % 60);
+            const minutes = Math.floor(time / 60);
+            const seconds = Math.floor(time % 60);
             return (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
-        };
-
+        }
         function updateTooltip() {
-            var currentTime = formatTime(teacher.currentTime());
-            var duration = formatTime(teacher.duration());
-            if (currentVideo == "HDMI") {
+            let currentTime = formatTime(teacher.currentTime());
+            let duration = formatTime(teacher.duration());
+            if (currentVideo === "HDMI") {
 
                 currentTime = formatTime(hdmi.currentTime());
                 duration = formatTime(hdmi.duration());
             }
             tooltip.textContent = currentTime + "/" + duration;
-        };
+        }
     </script>
 </body>
 <style>
@@ -216,11 +216,7 @@
         padding: 0;
     }
 
-    .videos {
-        height: 100vh;
-        width: 100vw;
-    }
-
+    /*noinspection CssUnusedSymbol*/
     .hide {
         display: none;
     }
