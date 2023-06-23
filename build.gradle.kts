@@ -6,7 +6,9 @@ plugins {
 }
 
 group = "rikacelery.github.io"
-version = "1.0.1"
+//MAJOR.MINOR.BUILD
+//255.255.65535
+version = "1.0.21"
 
 repositories {
     google()
@@ -49,13 +51,22 @@ compose.desktop {
     application {
         mainClass = "MainKt"
         nativeDistributions {
-            windows{
+            windows {
                 perUserInstall = true
                 shortcut = true
             }
-            targetFormats(TargetFormat.Msi)
-            packageName = "StudyAtJLU_Desktop"
-            packageVersion = "1.0.1"
+            macOS {
+                dockName = "StudyAtJLU_Desktop" + version.toString().substringAfter('-', "").let {
+                    if (it.isNotEmpty()) "_$it" else it
+                }
+                pkgPackageVersion = version.toString().substringBeforeLast('.')
+                pkgPackageBuildVersion = version.toString().substringAfterLast('.').substringBefore('-')
+            }
+            targetFormats(TargetFormat.Msi,TargetFormat.Dmg)
+            packageName = "StudyAtJLU_Desktop" + version.toString().substringAfter('-', "").let {
+                if (it.isNotEmpty()) "_$it" else it
+            }
+            packageVersion = version.toString().substringBefore('-')
         }
     }
 }
