@@ -21,10 +21,10 @@
 
     <div class="container" id="videos">
         <video id="my-video2" class="video-js vjs-theme-city" controls preload="auto" muted autoplay>
-            <source src="2023-04-14 09点55-11点30 HDMI.mp4" type="video/mp4" />
+            <source src="{HDMI}" type="video/mp4" />
         </video>
         <video id="my-video" class="video-js vjs-theme-city" controls preload="auto" muted autoplay>
-            <source src="2023-04-14 09点55-11点30 2023-04-14 教师机位.mp4" type="video/mp4"  />
+            <source src="{TEACHER}" type="video/mp4"  />
         </video>
     </div>
     <script>
@@ -39,8 +39,8 @@
 
         var progressBar = document.querySelector(".selector");
         progressBar.focus();
-        teacher.addEventListener("progress", function () { currentVideo = "TEACHER"; updateProgress(); })
-        hdmi.addEventListener("progress", function () { currentVideo = "HDMI"; updateProgress(); })
+        teacher.addEventListener("mouseover", function () { currentVideo = "TEACHER"; updateProgress(); })
+        hdmi.addEventListener("mouseover", function () { currentVideo = "HDMI"; updateProgress(); })
         hdmi.addEventListener("timeupdate", () => {
             if (currentVideo == "HDMI") {
                 let progress = hdmi.currentTime
