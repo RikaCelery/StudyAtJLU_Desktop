@@ -42,6 +42,7 @@ suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourc
             if (States.tasks.get(resourceId + "_1")?.isActive == true)
                 return@supervisorScope
             States.tasks[resourceId + "_1"] = launch {
+                States.progress[resourceId + "_1"] = 0f
                 runCatching {
                     downloadToFile(teacherFile, teacherUrl) { current, total, totalTime, _, startBytes ->
                         if (total != -1L) {
@@ -69,6 +70,7 @@ suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourc
             if (States.tasks.get(resourceId + "_2")?.isActive == true)
                 return@supervisorScope
             States.tasks[resourceId + "_2"] = launch {
+                States.progress[resourceId + "_2"] = 0f
                 runCatching {
                     downloadToFile(pcFile, pcUrl) { current, total, totalTime, _, startBytes ->
                         if (total != -1L) {

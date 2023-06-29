@@ -65,7 +65,9 @@ fun logOut() {
 fun main() {
 
     application {
-        Window(onCloseRequest = ::exitApplication) {
+        Window(onCloseRequest = {
+            exitApplication()
+        }) {
             MainPage()
         }
     }
