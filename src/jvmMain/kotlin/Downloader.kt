@@ -42,6 +42,7 @@ suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourc
             if (States.tasks.get(resourceId + "_1")?.isActive == true)
                 return@supervisorScope
             States.tasks[resourceId + "_1"] = launch {
+                States.progress[resourceId + "_1"] = 0f
                 runCatching {
                     downloadToFile(teacherFile, teacherUrl) { current, total, totalTime, _, startBytes ->
                         if (total != -1L) {
@@ -57,10 +58,10 @@ suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourc
                     States.progressInfo.remove(resourceId + "_1")
                 }.onFailure {
                     if (it is CancellationException) {
-                        States.progressInfo.put(resourceId + "_1", "Cancelled")
+                        States.progressInfo.put(resourceId + "_1", "暂停中")
 
                     } else {
-                        States.progressInfo.put(resourceId + "_1", "Failed")
+                        States.progressInfo.put(resourceId + "_1", "下载失败")
                         it.printStackTrace()
                     }
                 }
@@ -69,6 +70,7 @@ suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourc
             if (States.tasks.get(resourceId + "_2")?.isActive == true)
                 return@supervisorScope
             States.tasks[resourceId + "_2"] = launch {
+                States.progress[resourceId + "_2"] = 0f
                 runCatching {
                     downloadToFile(pcFile, pcUrl) { current, total, totalTime, _, startBytes ->
                         if (total != -1L) {
@@ -84,14 +86,15 @@ suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourc
                     States.progressInfo.remove(resourceId + "_2")
                 }.onFailure {
                     if (it is CancellationException) {
-                        States.progressInfo.put(resourceId + "_2", "Cancelled")
+                        States.progressInfo.put(resourceId + "_2", "暂停中")
 
                     } else {
-                        States.progressInfo.put(resourceId + "_2", "Failed")
+                        States.progressInfo.put(resourceId + "_2", "下载失败")
                         it.printStackTrace()
                     }
                 }
             }
+
         }
     }
     //播放器

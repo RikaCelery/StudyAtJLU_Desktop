@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +62,7 @@ suspend fun updateVideoList() {
     }?.getOrNull()?.runCatching {
         States.videos.clear()
         States.videos.addAll(map {
+
             buildJsonObject {
                 put("lessonName", it.String("courseName"))
                 put("date", it.String("scheduleTimeStart").substringBefore(' '))
@@ -96,6 +98,7 @@ suspend fun updateVideoList() {
     }
 
 }
+
 //贝塞尔曲线
 fun calculateY(t: Float): Float {
     val tSquared = t * t
@@ -106,6 +109,7 @@ fun calculateY(t: Float): Float {
 
     return y.toFloat()
 }
+
 suspend fun updateTermVideoList(termId: String) {
     States.syncState = SyncState.SYNCING
     require(States.queryVideos != null)
@@ -253,7 +257,6 @@ fun MainPage() {
                     PageState.SETTINGS -> "Back"
                 },
                 onFnClick = {
-                    logOut(States.pageState)
                     when (States.pageState) {
                         PageState.INDEX -> States.pageState = PageState.SETTINGS
                         PageState.SETTINGS -> States.pageState = PageState.INDEX
@@ -262,6 +265,7 @@ fun MainPage() {
                 syncState = States.syncState,
                 onSync = {
                     if (States.syncState != SyncState.SYNCING) {
+                        DB.setValue("cookie_cache", States.cookie)
                         syncCourses(mainScope)
                     }
                 })
@@ -378,25 +382,24 @@ fun MainPage() {
                                         }
                                     }
                                     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter ) {
                                             States.progress[id + "_1"]?.let {
-
                                                 LinearProgressIndicator(
                                                     it,
-                                                    Modifier.height(8.dp).weight(1f),
+                                                    Modifier.height(8.dp).fillMaxWidth(1f),
                                                     color = Color.hsv(calculateY(it) * 120, 1f, 1f)
                                                 )
-                                            } ?: Spacer(Modifier.height(8.dp).weight(1f))
+                                            } ?: Spacer(Modifier.height(8.dp).fillMaxWidth(1f))
                                             Text(States.progressInfo[id + "_1"] ?: "")
                                         }
-                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
                                             States.progress[id + "_2"]?.let {
                                                 LinearProgressIndicator(
                                                     it,
-                                                    Modifier.height(8.dp).weight(1f),
+                                                    Modifier.height(8.dp).fillMaxWidth(1f),
                                                     color = Color.hsv(calculateY(it) * 120, 1f, 1f)
                                                 )
-                                            } ?: Spacer(Modifier.height(8.dp).weight(1f))
+                                            } ?: Spacer(Modifier.height(8.dp).fillMaxWidth(1f))
                                             Text(States.progressInfo[id + "_2"] ?: "")
                                         }
                                     }
@@ -415,6 +418,11 @@ fun MainPage() {
                 }
             }
 
+        }
+        LaunchedEffect(Unit){
+            if (States.cookie.isNotEmpty()&&States.videos.isEmpty()){
+                syncCourses(mainScope)
+            }
         }
     }
 }

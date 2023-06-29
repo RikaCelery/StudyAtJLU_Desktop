@@ -1,32 +1,30 @@
 package utils.conf
 
-import logOut
-import java.io.File
+import utils.DB
+import kotlin.io.path.Path
+import kotlin.io.path.absolutePathString
 
 object Conf {
-    private val home = System.getProperty("user.home")
-    private val configFile = File(home, ".downloader.conf")
-    private val config: MutableMap<String, String> = mutableMapOf()
-
-    init {
-        if (configFile.exists()) {
-            configFile.readLines().forEach {
-                val (key, value) = it.split("=")
-                config[key] = value
+    private var savePathCache: String? = null
+    var savePath: String
+        get() {
+            val path = if (savePathCache != null) {
+                savePathCache
+            } else {
+                savePathCache = DB.getValue("save_path")
+                println("cache path $savePathCache")
+                savePathCache
             }
-        }else{
-            configFile.createNewFile()
-            setConf("savepath",".")
+            return path ?: Path(".").absolutePathString()
         }
-    }
+        set(value) {
+            if (value != savePathCache) {
+                savePathCache = value
+                DB.setValue("save_path", value)
+                println("update savePathCache to $value")
+            }
+            println("set save path to $value")
+        }
 
-    fun setConf(key: String, value: String) {
-        config[key] = value
-        configFile.writeText(config.map { "${it.key}=${it.value}" }.joinToString("\n"))
-        logOut("$key set to $value")
-    }
 
-    fun getConf(key: String): String? {
-        return config[key]
-    }
 }
