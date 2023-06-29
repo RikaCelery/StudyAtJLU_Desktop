@@ -8,12 +8,15 @@ plugins {
 group = "rikacelery.github.io"
 //MAJOR.MINOR.BUILD
 //255.255.65535
-version = "1.0.21"
+version = "1.0.3"
 
 repositories {
     google()
     mavenCentral()
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+}
+dependencies{
+
 }
 
 kotlin {
@@ -24,7 +27,6 @@ kotlin {
     sourceSets {
 
         val jvmMain by getting {
-
             dependencies {
                 implementation("org.jsoup:jsoup:1.16.1")
                 val ktorVersion = "2.3.0"
@@ -56,6 +58,7 @@ compose.desktop {
     application {
         mainClass = "MainKt"
         nativeDistributions {
+            modules("java.sql")//fix ClassNotFound: java.sql.Driver
             windows {
                 perUserInstall = true
                 shortcut = true
