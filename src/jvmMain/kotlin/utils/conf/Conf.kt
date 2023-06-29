@@ -1,21 +1,28 @@
 package utils.conf
 
-import utils.createTable
-import utils.getSavePathFromDB
-import utils.setupDatabase
-import utils.updateSavePath
+import utils.DB
 
 object Conf {
-    private var savePath:String?=null
-    init {
-        createTable()
-        setupDatabase()
-        savePath= getSavePathFromDB()
-        println("save path is $savePath")
-    }
-    fun setSavePath(string: String){
-        savePath=string
-        updateSavePath(string)
-        println("set save path to $savePath")
-    }
+    private var savePathCache: String? = null
+    var savePath: String
+        get() {
+            val path = if (savePathCache != null) {
+                savePathCache
+            } else {
+                savePathCache = DB.getValue("save_path")
+                println("cache path $savePathCache")
+                savePathCache
+            }
+            return path ?: "."
+        }
+        set(value) {
+            if (value != savePathCache) {
+                savePathCache = value
+                DB.setValue("save_path", value)
+                println("update savePathCache to $value")
+            }
+            println("set save path to $value")
+        }
+
+
 }

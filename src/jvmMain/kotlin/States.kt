@@ -2,7 +2,8 @@
 import androidx.compose.runtime.*
 import kotlinx.coroutines.Job
 import kotlinx.serialization.json.JsonObject
-import utils.getSavePathFromDB
+import utils.DB
+import utils.conf.Conf
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -11,14 +12,14 @@ object States {
     var videos = mutableStateListOf<JsonObject>()
     var syncState: SyncState by mutableStateOf(SyncState.OUT_DATE)
     var pageState by mutableStateOf(PageState.INDEX)
-    var downloadFolder :File=File(".").canonicalFile
-        get() = File(getSavePathFromDB()).canonicalFile
+    var downloadFolder: File = File(".").canonicalFile
+        get() = File(Conf.savePath).canonicalFile
 
 
-    val progress = mutableStateMapOf<String,Float>()
-    val progressInfo = mutableStateMapOf<String,String>()
+    val progress = mutableStateMapOf<String, Float>()
+    val progressInfo = mutableStateMapOf<String, String>()
 
-    val tasks = ConcurrentHashMap<String,Job>()
+    val tasks = ConcurrentHashMap<String, Job>()
 
     var currentJob: Job? = null
 
@@ -29,6 +30,7 @@ object States {
     var lessons = mutableStateListOf<JsonObject>()
     var termNow by mutableStateOf("---")
     var terms = mutableStateListOf<JsonObject>()
-    var cookie by mutableStateOf("")
+    var cookie: String by mutableStateOf(DB.getValue("cookie_cache")?:"")
+
 
 }
