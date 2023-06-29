@@ -63,9 +63,10 @@ fun logOut() {
 }
 
 fun main() {
-
+    States.loadAll()
     application {
         Window(onCloseRequest = {
+            States.saveAll()
             exitApplication()
         }) {
             MainPage()
