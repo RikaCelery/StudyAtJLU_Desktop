@@ -58,10 +58,10 @@ suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourc
                     States.progressInfo.remove(resourceId + "_1")
                 }.onFailure {
                     if (it is CancellationException) {
-                        States.progressInfo.put(resourceId + "_1", "Cancelled")
+                        States.progressInfo.put(resourceId + "_1", "暂停中")
 
                     } else {
-                        States.progressInfo.put(resourceId + "_1", "Failed")
+                        States.progressInfo.put(resourceId + "_1", "下载失败")
                         it.printStackTrace()
                     }
                 }
@@ -86,10 +86,10 @@ suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourc
                     States.progressInfo.remove(resourceId + "_2")
                 }.onFailure {
                     if (it is CancellationException) {
-                        States.progressInfo.put(resourceId + "_2", "Cancelled")
+                        States.progressInfo.put(resourceId + "_2", "暂停中")
 
                     } else {
-                        States.progressInfo.put(resourceId + "_2", "Failed")
+                        States.progressInfo.put(resourceId + "_2", "下载失败")
                         it.printStackTrace()
                     }
                 }
