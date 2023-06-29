@@ -1,6 +1,8 @@
 package utils.conf
 
 import utils.DB
+import kotlin.io.path.Path
+import kotlin.io.path.absolutePathString
 
 object Conf {
     private var savePathCache: String? = null
@@ -13,7 +15,7 @@ object Conf {
                 println("cache path $savePathCache")
                 savePathCache
             }
-            return path ?: "."
+            return path ?: Path(".").absolutePathString()
         }
         set(value) {
             if (value != savePathCache) {
