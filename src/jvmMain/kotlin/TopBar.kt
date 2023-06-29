@@ -16,13 +16,9 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
 import utils.String
 
 @Composable
@@ -46,7 +42,10 @@ fun TopBar(
 ) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         TextField(
-            cookieString, setCookieString, Modifier.weight(1f, true).height(50.dp), visualTransformation = PasswordVisualTransformation()
+            cookieString,
+            setCookieString,
+            Modifier.weight(1f, true).height(50.dp),
+            visualTransformation = PasswordVisualTransformation()
         )
         Spacer(Modifier.width(2.dp))
         IconButton(onClick = onSync) {
@@ -66,6 +65,7 @@ fun TopBar(
                 SyncState.SYNCED -> {
                     Icon(painterResource("done_outline.svg"), "refresh list")
                 }
+
                 SyncState.SYNCING -> {
                     Icon(painterResource("sync.svg"), "refresh list", Modifier.rotate(rotationState.value))
                 }
@@ -85,7 +85,7 @@ fun TopBar(
                 append(it.String("year"))
                 append(it.String("name"))
             }
-        },setFilter2, Modifier)
+        }, setFilter2, Modifier)
         Spacer(Modifier.width(2.dp))
         OutlinedButton(
             onFnClick, Modifier.size(50.dp), shape = CircleShape, contentPadding = PaddingValues(0.dp)

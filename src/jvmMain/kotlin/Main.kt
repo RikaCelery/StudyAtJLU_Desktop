@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 import ui.MainPage
 import utils.OkHttpUtil
 import java.io.File
+import java.io.PrintStream
 
 val client = HttpClient(OkHttp) {
 //    install(Logging) {
@@ -63,9 +64,16 @@ fun logOut() {
 }
 
 fun main() {
-
+    val err = PrintStream(File("err.txt").outputStream())
+    val out = PrintStream(File("out.txt").outputStream())
+    System.setErr(err)
+    System.setErr(out)
+    States.loadAll()
     application {
-        Window(onCloseRequest = ::exitApplication) {
+        Window(onCloseRequest = {
+            States.saveAll()
+            exitApplication()
+        }) {
             MainPage()
         }
     }
