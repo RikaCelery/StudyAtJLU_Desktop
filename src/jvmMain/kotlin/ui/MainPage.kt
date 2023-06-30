@@ -465,8 +465,8 @@ private fun syncCourses(mainScope: CoroutineScope) {
                     States.queryVideos = listOf("termYear" to it.String("year"), "term" to it.String("num"))
                     States.lessonNow = "---"
                 }
-                updateVideoList()
             }
+            updateVideoList()
         }?.onFailure {
             if (it is CancellationException) {
 
