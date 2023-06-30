@@ -49,3 +49,5 @@ bin/
 
 ### 缓存数据库 ###
 data.db
+/err.txt
+/out.txt
