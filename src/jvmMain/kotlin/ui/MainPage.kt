@@ -139,6 +139,9 @@ suspend fun updateTermVideoList(termId: String) {
         States.videos.clear()
         States.videos.addAll(map {
             buildJsonObject {
+                put("lessonName",it.String("courseName"))
+                put("date",it.String("scheduleTimeStart").substringBefore(' '))
+                put("timeRange",it.String("timeRange").replace(':', '点'))
                 put("info", buildString {
                     append(it.String("courseName"))
                     append(":")
@@ -465,8 +468,8 @@ private fun syncCourses(mainScope: CoroutineScope) {
                     States.queryVideos = listOf("termYear" to it.String("year"), "term" to it.String("num"))
                     States.lessonNow = "---"
                 }
-                updateVideoList()
             }
+            updateVideoList()
         }?.onFailure {
             if (it is CancellationException) {
 

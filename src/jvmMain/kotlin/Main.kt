@@ -51,10 +51,20 @@ val client = HttpClient(OkHttp) {
 }
 val logFile = File("log.txt")
 
-@Synchronized
-fun logOut(any: Any?) {
-    println(any)
-    logFile.appendText(any.toString() + "\n")
+
+inline fun logOut(any: Any?) {
+    val stackTrace = Thread.currentThread().stackTrace
+    val line = stackTrace[2].lineNumber
+    val message = buildString {
+        append("[")
+        append(stackTrace[1].methodName)
+        append("](")
+        append(line)
+        append(")")
+        append(any)
+    }
+    println(message)
+    logFile.appendText(message + "\n")
 }
 
 @Synchronized
@@ -64,17 +74,30 @@ fun logOut() {
 }
 
 fun main() {
-    val err = PrintStream(File("err.txt").outputStream())
-    val out = PrintStream(File("out.txt").outputStream())
+    val outErr = File("err.txt").outputStream()
+    val err = PrintStream(outErr)
+    val outOut = File("out.txt").outputStream()
+    val out = PrintStream(outOut)
     System.setErr(err)
     System.setErr(out)
     States.loadAll()
-    application {
-        Window(onCloseRequest = {
-            States.saveAll()
-            exitApplication()
-        }) {
-            MainPage()
+    try{
+        application {
+            Window(onCloseRequest = {
+                States.saveAll()
+                exitApplication()
+            }) {
+                MainPage()
+            }
         }
+    }catch (e:Exception){
+        e.printStackTrace()
+        File("data.db").deleteOnExit()
+        err.close()
+        outErr.close()
+        out.close()
+        outOut.close()
+        File("err.txt").renameTo(File("错误日志(StdErr).txt"))
+        File("out.txt").renameTo(File("错误日志(StdOut).txt"))
     }
 }
