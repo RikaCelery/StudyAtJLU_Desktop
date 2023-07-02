@@ -1,4 +1,7 @@
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import io.ktor.client.*
@@ -9,7 +12,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.serialization.kotlinx.xml.*
 import kotlinx.serialization.json.Json
-import ui.MainPage
+import ui.*
 import utils.OkHttpUtil
 import java.io.File
 import java.io.PrintStream
@@ -82,14 +85,7 @@ fun main() {
     System.setErr(out)
     States.loadAll()
     try{
-        application {
-            Window(onCloseRequest = {
-                States.saveAll()
-                exitApplication()
-            }) {
-                MainPage()
-            }
-        }
+        app()
     }catch (e:Exception){
         e.printStackTrace()
         File("data.db").deleteOnExit()
@@ -99,5 +95,26 @@ fun main() {
         outOut.close()
         File("err.txt").renameTo(File("错误日志(StdErr).txt"))
         File("out.txt").renameTo(File("错误日志(StdOut).txt"))
+    }
+}
+fun app(){
+    application {
+        Window(onCloseRequest = {
+            States.saveAll()
+            exitApplication()
+        }, title = "Study at JLU") {
+            val darkTheme = isSystemInDarkTheme()
+            val colors = if (darkTheme) DarkColorPalette else LightColorPalette
+
+            MaterialTheme(
+                colors = colors,
+                typography = DefaultTypography,
+                shapes = DefaultShapes
+            ) {
+                Surface(color = MaterialTheme.colors.background) {
+                    MainPage()
+                }
+            }
+        }
     }
 }
