@@ -6,7 +6,6 @@ import QUERY_LIVE_AND_RECORD
 import SettingPage
 import States
 import SyncState
-import TopBar
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,6 +33,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import logOut
+import TopBar
 import utils.*
 import java.awt.Desktop
 
@@ -215,216 +215,230 @@ suspend fun updateLessonList() {
 @Composable
 @Suppress("FunctionName")
 fun MainPage() {
-    MaterialTheme {
-        val mainScope = rememberCoroutineScope()
-        Column {
-            TopBar(cookieString = States.cookie,
-                setCookieString = { States.cookie = it.trim() },
-                filter1Name = "按课程筛选",
-                filter1Content = States.lessons,
-                setFilter1 = {
-                    States.lessonNow = it.String("courseName")/* + it.String("teacherName")*/
-                    logOut(it)
-                    States.queryType = 0
-                    States.queryVideos = listOf(
-                        "termId" to States.currentTerm,
-                        "submitStatus" to "0",
-                        "teachClassId" to it.String("classroomId"),
-                    )
-                    States.currentJob?.cancel()
-                    States.currentJob = mainScope.launch { updateVideoList() }
-                },
-                current1 = States.lessonNow,
-                filter2Name = "按学期筛选",
-                filter2Content = States.terms,
-                setFilter2 = {
-                    States.termNow = (it.String("year") + it.String("name"))
-                    States.lessonNow = "---"
-                    States.currentTerm = it.String("id")
-                    States.queryVideos = listOf("termYear" to it.String("year"), "term" to it.String("num"))
-                    States.currentJob?.cancel()
-                    States.currentJob = mainScope.launch {
-                        updateLessonList()
-                        if (States.currentTerm == States.terms.first().String("id")) updateVideoList()
-                        else updateTermVideoList(States.currentTerm)
-                    }
-                    logOut(it)
-                },
-                current2 = States.termNow,
-                fnIcon = when (States.pageState) {
-                    PageState.INDEX -> Icons.Filled.Settings
-                    PageState.SETTINGS -> Icons.Filled.ArrowBack
-                },
-                fnDescription = when (States.pageState) {
-                    PageState.INDEX -> "Settings"
-                    PageState.SETTINGS -> "Back"
-                },
-                onFnClick = {
-                    when (States.pageState) {
-                        PageState.INDEX -> States.pageState = PageState.SETTINGS
-                        PageState.SETTINGS -> States.pageState = PageState.INDEX
-                    }
-                },
-                syncState = States.syncState,
-                onSync = {
-                    if (States.syncState != SyncState.SYNCING) {
-                        DB.setValue("cookie_cache", States.cookie)
-                        syncCourses(mainScope)
-                    }
-                })
-            when (States.pageState) {
-                PageState.INDEX -> {
-                    LazyColumn {
-                        items(States.videos, { it.hashCode() }) { lessonInfo ->
-                            Box(Modifier.animateItemPlacement()) {
-                                val id = lessonInfo.String("res_id")
-                                Spacer(Modifier.height(4.dp))
-                                Box(Modifier.fillMaxWidth().height(80.dp).background(Color.Transparent).clickable {}) {
-                                    Row(
-                                        Modifier.fillMaxSize()/*.background(Color.Cyan)*/,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            lessonInfo.String("info"), modifier = Modifier.weight(1f, false)
-                                        )
-                                        //button:
-                                        Row() {
-                                            //play
-                                            val modifier = Modifier.size(40.dp)
-                                            val modifier1 = Modifier.padding(5.dp)
-
-                                            val lessonName =
-                                                lessonInfo.String("lessonName").replace(':', '_').replace("*", "")
-
-                                            val date =
-                                                lessonInfo.String("date")
-                                                    .replace(':', '_')
-
-                                            val folder =
-                                                States.downloadFolder.resolve(lessonName).resolve(date).canonicalFile
-                                            val teacherFile = folder.resolve(
-                                                "${
-                                                    date.plus(' ').plus(lessonInfo.String("timeRange"))
-                                                } $date 教师机位.mp4"
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        MaterialTheme {
+            val mainScope = rememberCoroutineScope()
+            Column {
+                TopBar(cookieString = States.cookie,
+                    setCookieString = { States.cookie = it.trim() },
+                    filter1Name = "按课程筛选",
+                    filter1Content = States.lessons,
+                    setFilter1 = {
+                        States.lessonNow = it.String("courseName")/* + it.String("teacherName")*/
+                        logOut(it)
+                        States.queryType = 0
+                        States.queryVideos = listOf(
+                            "termId" to States.currentTerm,
+                            "submitStatus" to "0",
+                            "teachClassId" to it.String("classroomId"),
+                        )
+                        States.currentJob?.cancel()
+                        States.currentJob = mainScope.launch { updateVideoList() }
+                    },
+                    current1 = States.lessonNow,
+                    filter2Name = "按学期筛选",
+                    filter2Content = States.terms,
+                    setFilter2 = {
+                        States.termNow = (it.String("year") + it.String("name"))
+                        States.lessonNow = "---"
+                        States.currentTerm = it.String("id")
+                        States.queryVideos = listOf("termYear" to it.String("year"), "term" to it.String("num"))
+                        States.currentJob?.cancel()
+                        States.currentJob = mainScope.launch {
+                            updateLessonList()
+                            if (States.currentTerm == States.terms.first().String("id")) updateVideoList()
+                            else updateTermVideoList(States.currentTerm)
+                        }
+                        logOut(it)
+                    },
+                    current2 = States.termNow,
+                    fnIcon = when (States.pageState) {
+                        PageState.INDEX -> Icons.Filled.Settings
+                        PageState.SETTINGS -> Icons.Filled.ArrowBack
+                    },
+                    fnDescription = when (States.pageState) {
+                        PageState.INDEX -> "Settings"
+                        PageState.SETTINGS -> "Back"
+                    },
+                    onFnClick = {
+                        when (States.pageState) {
+                            PageState.INDEX -> States.pageState = PageState.SETTINGS
+                            PageState.SETTINGS -> States.pageState = PageState.INDEX
+                        }
+                    },
+                    syncState = States.syncState,
+                    onSync = {
+                        if (States.syncState != SyncState.SYNCING) {
+                            DB.setValue("cookie_cache", States.cookie)
+                            syncCourses(mainScope)
+                        }
+                    })
+                when (States.pageState) {
+                    PageState.INDEX -> {
+                        LazyColumn {
+                            items(States.videos, { it.hashCode() }) { lessonInfo ->
+                                Box(Modifier.animateItemPlacement()) {
+                                    val id = lessonInfo.String("res_id")
+                                    Spacer(Modifier.height(4.dp))
+                                    Box(
+                                        Modifier.fillMaxWidth().height(80.dp).background(Color.Transparent)
+                                            .clickable {}) {
+                                        Row(
+                                            Modifier.fillMaxSize()/*.background(Color.Cyan)*/,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                lessonInfo.String("info"), modifier = Modifier.weight(1f, false)
                                             )
-                                            val pcFile = folder.resolve(
-                                                "${
-                                                    date.plus(' ').plus(lessonInfo.String("timeRange"))
-                                                } HDMI.mp4"
-                                            )
+                                            //button:
+                                            Row() {
+                                                //play
+                                                val modifier = Modifier.size(40.dp)
+                                                val modifier1 = Modifier.padding(5.dp)
+
+                                                val lessonName =
+                                                    lessonInfo.String("lessonName").replace(':', '_').replace("*", "")
+
+                                                val date =
+                                                    lessonInfo.String("date")
+                                                        .replace(':', '_')
+
+                                                val folder =
+                                                    States.downloadFolder.resolve(lessonName)
+                                                        .resolve(date).canonicalFile
+                                                val teacherFile = folder.resolve(
+                                                    "${
+                                                        date.plus(' ').plus(lessonInfo.String("timeRange"))
+                                                    } $date 教师机位.mp4"
+                                                )
+                                                val pcFile = folder.resolve(
+                                                    "${
+                                                        date.plus(' ').plus(lessonInfo.String("timeRange"))
+                                                    } HDMI.mp4"
+                                                )
 //
-                                            IconButton({
-                                                val file = folder.resolve("index.html")
-                                                println(file)
-                                                if (file.exists().not()) {
-                                                    runBlocking() {
-                                                        downloadVideo(folder, teacherFile, pcFile, id, 2)
+                                                IconButton({
+                                                    val file = folder.resolve("index.html")
+                                                    println(file)
+                                                    if (file.exists().not()) {
+                                                        runBlocking() {
+                                                            downloadVideo(folder, teacherFile, pcFile, id, 2)
+                                                        }
                                                     }
-                                                }
-                                                try {
-                                                    Desktop.getDesktop().browse(file.toURI())
-                                                } catch (e: Exception) {
-                                                    e.printStackTrace()
+                                                    try {
+                                                        Desktop.getDesktop().browse(file.toURI())
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
 //                                                    AlertDialog({}, {}, text = { Text("无法打开页面:${e.localizedMessage}") })
-                                                }
-                                            }, modifier) {
-                                                Icon(painterResource("play_arrow.svg"), "download", modifier1)
-                                            }
-                                            //download use when to switch
-                                            if (teacherFile.exists()) IconButton({}, modifier) {
-                                                Icon(painterResource("done_outline.svg"), "download", modifier1)
-                                            } else if (States.tasks[id + "_1"]?.isActive == true) {
-                                                IconButton({
-                                                    States.tasks[id + "_1"]?.cancel()
+                                                    }
                                                 }, modifier) {
-                                                    Icon(
-                                                        painterResource("half_downloaded.svg"), "download", modifier1
-                                                    )
+                                                    Icon(painterResource("play_arrow.svg"), "download", modifier1)
                                                 }
-                                            } else IconButton({
-                                                mainScope.launch {
-                                                    downloadVideo(folder, teacherFile, pcFile, id)
-                                                }
-                                            }, modifier) {
-                                                Icon(painterResource("download.svg"), "download", modifier1)
-                                            }
-
-
-                                            if (pcFile.exists()) IconButton({}, modifier) {
-                                                Icon(painterResource("done_outline.svg"), "download", modifier1)
-                                            } else if (States.tasks[id + "_2"]?.isActive == true) {
-                                                IconButton({
-                                                    States.tasks[id + "_2"]?.cancel()
+                                                //download use when to switch
+                                                if (teacherFile.exists()) IconButton({}, modifier) {
+                                                    Icon(painterResource("done_outline.svg"), "download", modifier1)
+                                                } else if (States.tasks[id + "_1"]?.isActive == true) {
+                                                    IconButton({
+                                                        States.tasks[id + "_1"]?.cancel()
+                                                    }, modifier) {
+                                                        Icon(
+                                                            painterResource("half_downloaded.svg"),
+                                                            "download",
+                                                            modifier1
+                                                        )
+                                                    }
+                                                } else IconButton({
+                                                    mainScope.launch {
+                                                        downloadVideo(folder, teacherFile, pcFile, id)
+                                                    }
                                                 }, modifier) {
-                                                    Icon(
-                                                        painterResource("half_downloaded.svg"), "download", modifier1
-                                                    )
+                                                    Icon(painterResource("download.svg"), "download", modifier1)
                                                 }
-                                            } else IconButton({
-                                                mainScope.launch {
-                                                    downloadVideo(folder, teacherFile, pcFile, id, 1)
-                                                }
-                                            }, modifier) {
-                                                Icon(painterResource("download.svg"), "download", modifier1)
-                                            }
 
-                                            //open folder
-                                            IconButton({
-                                                val file = folder
-                                                println(file)
-                                                try {
-                                                    Desktop.getDesktop().open(file)
-                                                } catch (e: Exception) {
-                                                    e.printStackTrace()
+
+                                                if (pcFile.exists()) IconButton({}, modifier) {
+                                                    Icon(painterResource("done_outline.svg"), "download", modifier1)
+                                                } else if (States.tasks[id + "_2"]?.isActive == true) {
+                                                    IconButton({
+                                                        States.tasks[id + "_2"]?.cancel()
+                                                    }, modifier) {
+                                                        Icon(
+                                                            painterResource("half_downloaded.svg"),
+                                                            "download",
+                                                            modifier1
+                                                        )
+                                                    }
+                                                } else IconButton({
+                                                    mainScope.launch {
+                                                        downloadVideo(folder, teacherFile, pcFile, id, 1)
+                                                    }
+                                                }, modifier) {
+                                                    Icon(painterResource("download.svg"), "download", modifier1)
+                                                }
+
+                                                //open folder
+                                                IconButton({
+                                                    val file = folder
+                                                    println(file)
+                                                    try {
+                                                        Desktop.getDesktop().open(file)
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
 //                                                    AlertDialog({}, {}, text = { Text("无法打开文件夹:${e.localizedMessage}") })
+                                                    }
+                                                }, modifier) {
+                                                    Icon(painterResource("folder_open.svg"), "folder_open", modifier1)
                                                 }
-                                            }, modifier) {
-                                                Icon(painterResource("folder_open.svg"), "folder_open", modifier1)
+                                            }
+                                        }
+                                        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+                                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                                                States.progress[id + "_1"]?.let {
+                                                    LinearProgressIndicator(
+                                                        it,
+                                                        Modifier.height(8.dp).fillMaxWidth(1f),
+                                                        color = Color.hsv(calculateY(it) * 120, 1f, 1f)
+                                                    )
+                                                } ?: Spacer(Modifier.height(8.dp).fillMaxWidth(1f))
+                                                Text(States.progressInfo[id + "_1"] ?: "")
+                                            }
+                                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                                                States.progress[id + "_2"]?.let {
+                                                    LinearProgressIndicator(
+                                                        it,
+                                                        Modifier.height(8.dp).fillMaxWidth(1f),
+                                                        color = Color.hsv(calculateY(it) * 120, 1f, 1f)
+                                                    )
+                                                } ?: Spacer(Modifier.height(8.dp).fillMaxWidth(1f))
+                                                Text(States.progressInfo[id + "_2"] ?: "")
                                             }
                                         }
                                     }
-                                    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-                                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter ) {
-                                            States.progress[id + "_1"]?.let {
-                                                LinearProgressIndicator(
-                                                    it,
-                                                    Modifier.height(8.dp).fillMaxWidth(1f),
-                                                    color = Color.hsv(calculateY(it) * 120, 1f, 1f)
-                                                )
-                                            } ?: Spacer(Modifier.height(8.dp).fillMaxWidth(1f))
-                                            Text(States.progressInfo[id + "_1"] ?: "")
-                                        }
-                                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-                                            States.progress[id + "_2"]?.let {
-                                                LinearProgressIndicator(
-                                                    it,
-                                                    Modifier.height(8.dp).fillMaxWidth(1f),
-                                                    color = Color.hsv(calculateY(it) * 120, 1f, 1f)
-                                                )
-                                            } ?: Spacer(Modifier.height(8.dp).fillMaxWidth(1f))
-                                            Text(States.progressInfo[id + "_2"] ?: "")
-                                        }
-                                    }
+                                    Spacer(Modifier.height(4.dp))
+                                    Spacer(
+                                        Modifier.height(2.dp).fillMaxWidth().background(Color.Gray)
+                                    )
                                 }
-                                Spacer(Modifier.height(4.dp))
-                                Spacer(
-                                    Modifier.height(2.dp).fillMaxWidth().background(Color.Gray)
-                                )
                             }
+                        }
+                    }
+
+                    PageState.SETTINGS -> {
+                        Surface(color = MaterialTheme.colors.background) {
+                            SettingPage()
                         }
                     }
                 }
 
-                PageState.SETTINGS -> {
-                    SettingPage()
-                }
             }
-
-        }
-        LaunchedEffect(Unit){
-            if (States.cookie.isNotEmpty()&&States.videos.isEmpty()){
-                syncCourses(mainScope)
+            LaunchedEffect(Unit) {
+                if (States.cookie.isNotEmpty() && States.videos.isEmpty()) {
+                    syncCourses(mainScope)
+                }
             }
         }
     }
@@ -480,5 +494,6 @@ private fun syncCourses(mainScope: CoroutineScope) {
         }?.onSuccess {
             States.syncState = SyncState.SYNCED
         }
+
     }
 }

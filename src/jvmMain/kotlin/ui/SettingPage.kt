@@ -14,32 +14,36 @@ import javax.swing.filechooser.FileSystemView
 @Composable
 fun SettingPage() {
     var savePath by remember { mutableStateOf(Conf.savePath) } // use a mutable state variable
-
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
     ) {
-        OutlinedTextField(
-            value = savePath,
-            onValueChange = { savePath = it }, // update the mutable state variable
-            label = { Text(text = savePath) },
-            modifier = Modifier.weight(1f)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = savePath,
+                onValueChange = { savePath = it }, // update the mutable state variable
+                label = { Text(text = savePath) },
+                modifier = Modifier.weight(1f)
+            )
 
-        Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-        Button(onClick = {
-            val directory = chooseDirectory()
-            if (directory != null)
-                savePath = directory
-        }) { // update the mutable state variable
-            Text(text = "保存路径")
-        }
+            Button(onClick = {
+                val directory = chooseDirectory()
+                if (directory != null)
+                    savePath = directory
+            }) { // update the mutable state variable
+                Text(text = "保存路径")
+            }
 
-        Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-        Button(onClick = { Conf.savePath = savePath }) {
-            Text(text = "保存")
+            Button(onClick = { Conf.savePath = savePath }) {
+                Text(text = "保存")
+            }
         }
     }
 }
