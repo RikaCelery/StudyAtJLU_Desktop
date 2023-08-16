@@ -9,13 +9,17 @@ object Conf {
     var savePath: String
         get() {
             val path = if (savePathCache != null) {
-                savePathCache
+                savePathCache!!
             } else {
-                savePathCache = DB.getValue("save_path")
-                println("cache path $savePathCache")
-                savePathCache
+                val pathString = Path(".").absolutePathString()
+                DB.getValue("save_path")?.let {
+                    savePathCache = DB.getValue("save_path")
+                } ?: run {
+                    DB.setValue("save_path", pathString)
+                }
+                savePathCache?:pathString
             }
-            return path ?: Path(".").absolutePathString()
+            return path
         }
         set(value) {
             if (value != savePathCache) {

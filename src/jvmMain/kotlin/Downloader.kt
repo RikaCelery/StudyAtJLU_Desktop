@@ -17,8 +17,14 @@ suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourc
     val info = runCatching {
         client.get(QUERY_VIDEO_INFO) {
             parameter("resourceId", resourceId)
+            headers.set(HttpHeaders.Cookie,States.cookieJSESSIONID)
+        }.also {
+            logOut(it.call.request.url)
+            logOut(it.call.request.headers)
         }.body<JsonObject>().Object("data")
-    }.onFailure {}.getOrNull()
+    }.onFailure {
+        it.printStackTrace()
+    }.getOrNull()
     if (info == null) {
         logOut("failed: $resourceId")
         return

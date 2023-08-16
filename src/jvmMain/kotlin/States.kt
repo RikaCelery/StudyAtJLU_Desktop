@@ -35,6 +35,7 @@ object States {
     var termNow by mutableStateOf("---")
     var terms = mutableStateListOf<JsonObject>()
     var cookie: String by mutableStateOf("")
+    var cookieJSESSIONID: String by mutableStateOf("")
 
     fun saveAll(){
         DB.setValue("currentTerm",currentTerm)
@@ -46,6 +47,7 @@ object States {
         DB.setValue("term_now", termNow)
         DB.setValue("terms", Json.Default.encodeToString<List<JsonObject>>(terms))
         DB.setValue("cookie_cache", cookie)
+        DB.setValue("cookieJSESSIONID_cache", cookieJSESSIONID)
     }
     fun loadAll(){
         currentTerm = DB.getValue("currentTerm")?:""
@@ -57,5 +59,6 @@ object States {
         termNow = DB.getValue("term_now")?:"---"
         terms.addAll(DB.getValue("terms")?.let { Json.parseToJsonElement(it).objectArray }?.toTypedArray()?: arrayOf())
         cookie = DB.getValue("cookie_cache")?:""
+        cookieJSESSIONID = DB.getValue("cookieJSESSIONID_cache")?:""
     }
 }

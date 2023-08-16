@@ -6,6 +6,7 @@ import QUERY_LIVE_AND_RECORD
 import SettingPage
 import States
 import SyncState
+import TopBar
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,7 +34,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import logOut
-import TopBar
 import utils.*
 import java.awt.Desktop
 
@@ -139,9 +139,9 @@ suspend fun updateTermVideoList(termId: String) {
         States.videos.clear()
         States.videos.addAll(map {
             buildJsonObject {
-                put("lessonName",it.String("courseName"))
-                put("date",it.String("scheduleTimeStart").substringBefore(' '))
-                put("timeRange",it.String("timeRange").replace(':', '点'))
+                put("lessonName", it.String("courseName"))
+                put("date", it.String("scheduleTimeStart").substringBefore(' '))
+                put("timeRange", it.String("timeRange").replace(':', '点'))
                 put("info", buildString {
                     append(it.String("courseName"))
                     append(":")
@@ -222,8 +222,11 @@ fun MainPage() {
         MaterialTheme {
             val mainScope = rememberCoroutineScope()
             Column {
-                TopBar(cookieString = States.cookie,
+                TopBar(
+                    cookieString = States.cookie,
                     setCookieString = { States.cookie = it.trim() },
+                    cookieJSESSIONID = States.cookieJSESSIONID,
+                    setCookieJSESSIONID = { States.cookieJSESSIONID = it.trim() },
                     filter1Name = "按课程筛选",
                     filter1Content = States.lessons,
                     setFilter1 = {
@@ -271,9 +274,14 @@ fun MainPage() {
                     },
                     syncState = States.syncState,
                     onSync = {
+
                         if (States.syncState != SyncState.SYNCING) {
-                            DB.setValue("cookie_cache", States.cookie)
-                            syncCourses(mainScope)
+//                            syncCourses(mainScope)
+                            States.currentJob = mainScope.launch {
+                                updateLessonList()
+                                if (States.currentTerm == States.terms.first().String("id")) updateVideoList()
+                                else updateTermVideoList(States.currentTerm)
+                            }
                         }
                     })
                 when (States.pageState) {

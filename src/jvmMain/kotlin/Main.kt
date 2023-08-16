@@ -103,7 +103,7 @@ fun app(){
             States.saveAll()
             exitApplication()
         }, title = "Study at JLU") {
-            val darkTheme = isSystemInDarkTheme()
+            val darkTheme = isSystemInDarkTheme()&&false
             val colors = if (darkTheme) DarkColorPalette else LightColorPalette
 
             MaterialTheme(
