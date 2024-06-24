@@ -16,7 +16,6 @@ fun JsonElement.Object(key: String): JsonObject {
     }
     return value
 }
-
 @Suppress("FunctionName", "unused")
 fun JsonElement.Array(key: String): JsonArray {
     val obj = this as? JsonObject ?: throw JsonElementCastException("Cannot cast to JsonObject")
@@ -150,5 +149,22 @@ fun JsonElement.Double(key: String): Double {
     }
     val value = jsonPrimitive.doubleOrNull
         ?: throw JsonElementCastException("Value of key '$key' is not a Double, value '${obj.getValue(key)}'")
+    return value
+}
+
+
+@Suppress("FunctionName", "unused")
+fun JsonElement.Boolean(key: String): Boolean {
+    val obj = this as? JsonObject ?: throw JsonElementCastException("Cannot cast to JsonObject")
+    if (!obj.containsKey(key)) {
+        throw JsonElementCastException("Key '$key' not found")
+    }
+    val jsonPrimitive = try {
+        obj.getValue(key).jsonPrimitive
+    } catch (_: IllegalArgumentException) {
+        throw JsonElementCastException("Value of key '$key' is not a JsonPrimitive, value '${obj.getValue(key)}'")
+    }
+    val value = jsonPrimitive.booleanOrNull
+        ?: throw JsonElementCastException("Value of key '$key' is not a Boolean, value '${obj.getValue(key)}'")
     return value
 }

@@ -34,6 +34,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import logOut
 import TopBar
+import cas.CasLogin
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import utils.*
 import java.awt.Desktop
 
@@ -48,7 +51,7 @@ suspend fun updateVideoList() {
             parameter("identity", 2)
             forEach { parameter(it.first, it.second) }
 
-            header("Cookie", States.cookie)
+//            header("Cookie", States.cookie)
         }.body<JsonObject>()
 //        logOut(body)
         body.Object("data").Array("dataList").filter { it.StringOrNull("isOpen") != null }
@@ -125,7 +128,7 @@ suspend fun updateTermVideoList(termId: String) {
                 parameter("submitStatus", 0)
                 parameter("termId", termId)
                 parameter("teachClassId", it.String("classroomId"))
-                header("Cookie", States.cookie)
+//                header("Cookie", States.cookie)
             }.body<JsonObject>().Object("data").ObjectArray("dataList").filter { it.StringOrNull("isOpen") != null }
         }.flatten()
     }?.onFailure {
@@ -139,9 +142,9 @@ suspend fun updateTermVideoList(termId: String) {
         States.videos.clear()
         States.videos.addAll(map {
             buildJsonObject {
-                put("lessonName",it.String("courseName"))
-                put("date",it.String("scheduleTimeStart").substringBefore(' '))
-                put("timeRange",it.String("timeRange").replace(':', '点'))
+                put("lessonName", it.String("courseName"))
+                put("date", it.String("scheduleTimeStart").substringBefore(' '))
+                put("timeRange", it.String("timeRange").replace(':', '点'))
                 put("info", buildString {
                     append(it.String("courseName"))
                     append(":")
@@ -179,7 +182,7 @@ suspend fun updateLessonList() {
     runCatching {
         logOut("updateLessonList")
         val body = client.get("https://ilearntec.jlu.edu.cn/studycenter/platform/classroom/myClassroom") {
-            header("Cookie", States.cookie)
+//            header("Cookie", States.cookie)
             parameter("termYear", States.currentTerm.substringAfter('-').substringBefore('-'))
             parameter("term", States.currentTerm.substringAfterLast('-'))
         }.body<JsonObject>()
@@ -222,8 +225,11 @@ fun MainPage() {
         MaterialTheme {
             val mainScope = rememberCoroutineScope()
             Column {
-                TopBar(cookieString = States.cookie,
-                    setCookieString = { States.cookie = it.trim() },
+                TopBar(
+                    username = States.cookie,
+                    setUsername = { States.cookie = it.trim() },
+                    password = States.password,
+                    setPassword = { States.password = it.trim() },
                     filter1Name = "按课程筛选",
                     filter1Content = States.lessons,
                     setFilter1 = {
@@ -272,7 +278,7 @@ fun MainPage() {
                     syncState = States.syncState,
                     onSync = {
                         if (States.syncState != SyncState.SYNCING) {
-                            DB.setValue("cookie_cache", States.cookie)
+                            States.saveAll()
                             syncCourses(mainScope)
                         }
                     })
@@ -295,7 +301,7 @@ fun MainPage() {
                                                 lessonInfo.String("info"), modifier = Modifier.weight(1f, false)
                                             )
                                             //button:
-                                            Row() {
+                                            Row {
                                                 //play
                                                 val modifier = Modifier.size(40.dp)
                                                 val modifier1 = Modifier.padding(5.dp)
@@ -325,8 +331,12 @@ fun MainPage() {
                                                     val file = folder.resolve("index.html")
                                                     println(file)
                                                     if (file.exists().not()) {
-                                                        runBlocking() {
-                                                            downloadVideo(folder, teacherFile, pcFile, id, 2)
+                                                        runBlocking {
+                                                            try {
+                                                                downloadVideo(folder, teacherFile, pcFile, id, 2)
+                                                            } catch (e: Exception) {
+                                                                e.printStackTrace()
+                                                            }
                                                         }
                                                     }
                                                     try {
@@ -353,8 +363,13 @@ fun MainPage() {
                                                     }
                                                 } else IconButton({
                                                     mainScope.launch {
-                                                        downloadVideo(folder, teacherFile, pcFile, id)
-                                                    }
+                                                        try {
+                                                            downloadVideo(folder, teacherFile, pcFile, id)
+
+                                                        }catch (e: Exception){
+                                                            e.printStackTrace()
+                                                        }
+                                                        }
                                                 }, modifier) {
                                                     Icon(painterResource("download.svg"), "download", modifier1)
                                                 }
@@ -374,7 +389,12 @@ fun MainPage() {
                                                     }
                                                 } else IconButton({
                                                     mainScope.launch {
+                                                        try {
+
                                                         downloadVideo(folder, teacherFile, pcFile, id, 1)
+                                                        }catch (e: Exception){
+                                                            e.printStackTrace()
+                                                        }
                                                     }
                                                 }, modifier) {
                                                     Icon(painterResource("download.svg"), "download", modifier1)
@@ -448,10 +468,24 @@ private fun syncCourses(mainScope: CoroutineScope) {
     States.syncState = SyncState.SYNCING
     States.currentJob?.cancel()
     States.currentJob = mainScope.launch(Dispatchers.Default) {
+        CasLogin.login(client, States.cookie, States.password)
         runCatching {
-            val body = client.post(QUERY_ALL_TERM) {
+            client.get("https://ilearn.jlu.edu.cn/cas-server/login?service=https%3A%2F%2Filearntec.jlu.edu.cn%2Fstudycenter%2Fplatform%2Fmain%2Findex") {
                 header("Cookie", States.cookie)
+            }
+                .headers[HttpHeaders.SetCookie].also {
+                println("setCookie " + it)
+            }
+//            client.get("https://ilearn.jlu.edu.cn/note-web-api/index/login")
+//                .headers[HttpHeaders.SetCookie].also {
+//                println("setCookie " + it)
+//            }
+            val body = client.post(QUERY_ALL_TERM) {
+//                header("Cookie", States.cookie)
+            }.also {
+                println(it.request.headers)
             }.body<JsonObject>()
+            println(body)
             require(body.String("status") == "1") {
                 "failed to parse term list."
             }

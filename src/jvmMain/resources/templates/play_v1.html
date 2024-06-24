@@ -91,7 +91,7 @@
                 hdmi.currentTime = timeToSeek;
                 teacher.currentTime = timeToSeek;
             }
-        };
+        }
 
         function updateProgress() {
             if (currentVideo == "HDMI") {
@@ -176,7 +176,7 @@
             var minutes = Math.floor(time / 60);
             var seconds = Math.floor(time % 60);
             return (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
-        };
+        }
 
         function updateTooltip() {
             var currentTime = formatTime(teacher.currentTime);
@@ -187,7 +187,7 @@
                 duration = formatTime(hdmi.duration);
             }
             tooltip.textContent = currentTime + "/" + duration;
-        };
+        }
     </script>
 </body>
 <style>

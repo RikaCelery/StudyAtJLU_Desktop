@@ -4,10 +4,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.TextField
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -24,8 +21,10 @@ import utils.String
 @Composable
 @Suppress("FunctionName")
 fun TopBar(
-    cookieString: String,
-    setCookieString: (String) -> Unit,
+    username: String,
+    setUsername: (String) -> Unit,
+    password: String,
+    setPassword: (String) -> Unit,
     filter1Name: String,
     filter1Content: List<JsonObject>,
     setFilter1: (JsonObject) -> Unit,
@@ -42,8 +41,15 @@ fun TopBar(
 ) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         TextField(
-            cookieString,
-            setCookieString,
+            username,
+            setUsername,
+            Modifier.weight(1f, true).height(50.dp),
+//            visualTransformation = PasswordVisualTransformation()
+        )
+        Divider(Modifier.width(2.dp))
+        TextField(
+            password,
+            setPassword,
             Modifier.weight(1f, true).height(50.dp),
             visualTransformation = PasswordVisualTransformation()
         )

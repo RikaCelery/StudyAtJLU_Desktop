@@ -7,7 +7,7 @@ object DB {
     object ConfTable : Table("configs") {
         val key = text("key").uniqueIndex()
         val value = text("value")
-        override val primaryKey: PrimaryKey?
+        override val primaryKey: PrimaryKey
             get() = PrimaryKey(key)
     }
 

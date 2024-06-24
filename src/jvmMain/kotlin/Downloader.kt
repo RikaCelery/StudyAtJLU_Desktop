@@ -6,6 +6,7 @@ import io.ktor.utils.io.streams.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.JsonObject
 import utils.Array
+import utils.Boolean
 import utils.Object
 import utils.String
 import java.io.File
@@ -15,10 +16,14 @@ import kotlin.io.path.pathString
 suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourceId: String, type: Int = 0) {
 
     val info = runCatching {
-        client.get(QUERY_VIDEO_INFO) {
+        val result = client.get(QUERY_VIDEO_INFO) {
             parameter("resourceId", resourceId)
-        }.body<JsonObject>().Object("data")
-    }.onFailure {}.getOrNull()
+        }.body<JsonObject>()
+        assert(result.Boolean("success")) { "Failed to download video," + result.toString() }
+        result.Object("data")
+    }.onFailure {
+        it.printStackTrace()
+    }.getOrNull()
     if (info == null) {
         logOut("failed: $resourceId")
         return
@@ -31,9 +36,10 @@ suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourc
 
     val videoInfos = info.Array("videoList")
 
-    val teacherVideoInfo = videoInfos.single { it.String("videoName").contains("教师") }
-    val pcVideoInfo = videoInfos.single { it.String("videoName").contains("HDMI") }
-
+    val teacherVideoInfo = videoInfos.singleOrNull { it.String("videoName").contains("教师") }
+    val pcVideoInfo = videoInfos.singleOrNull { it.String("videoName").contains("HDMI") }
+    requireNotNull(teacherVideoInfo)
+    requireNotNull(pcVideoInfo)
     val teacherUrl = Url(teacherVideoInfo.String("videoPath"))
     val pcUrl = Url(pcVideoInfo.String("videoPath"))
 

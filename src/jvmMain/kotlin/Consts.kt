@@ -8,4 +8,4 @@ const val UNIT_MB = UNIT_KB * 1024
 //64 KB
 const val DOWNLOAD_BUFFER_SIZE = UNIT_KB * 128L
 
-
+const val CAS_URL = "https://cas.jlu.edu.cn/tpass/login"

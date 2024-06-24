@@ -25,7 +25,6 @@ kotlin {
 
         val jvmMain by getting {
             dependencies {
-                implementation("org.jsoup:jsoup:1.16.1")
                 val ktorVersion = "2.3.0"
                 implementation("io.ktor:ktor-client-okhttp-jvm:$ktorVersion")
                 implementation("io.ktor:ktor-client-logging-jvm:$ktorVersion")
@@ -40,6 +39,7 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines:0.19.2")
                 implementation("com.typesafe:config:1.4.1")
+                implementation("org.jsoup:jsoup:1.17.2")
 
                 implementation("org.jetbrains.exposed:exposed-core:0.36.2")
                 implementation("org.jetbrains.exposed:exposed-dao:0.36.2")
@@ -67,7 +67,7 @@ compose.desktop {
                 pkgPackageVersion = version.toString().substringBeforeLast('.')
                 pkgPackageBuildVersion = version.toString().substringAfterLast('.').substringBefore('-')
             }
-            targetFormats(TargetFormat.Msi,TargetFormat.Dmg)
+            targetFormats(TargetFormat.Msi, TargetFormat.Dmg)
             packageName = "StudyAtJLU_Desktop" + version.toString().substringAfter('-', "").let {
                 if (it.isNotEmpty()) "_$it" else it
             }
