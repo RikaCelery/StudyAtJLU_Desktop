@@ -33,7 +33,7 @@ jobs:
       uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
 
     - name: Build with Gradle Wrapper
-      run: chmod +x ./gradlew && ./gradlew packageDistributionForCurrentOS ; tree build/compose/binaries/main/ ; ls build/compose/binaries/main/msi ; ls build/compose/binaries/main/exe
+      run: chmod +x ./gradlew && ./gradlew packageDistributionForCurrentOS ; tree build/compose/binaries
     - name: Upload MSI
       uses: actions/upload-artifact@v4.4.3
       with:
