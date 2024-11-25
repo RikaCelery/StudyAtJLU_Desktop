@@ -27,7 +27,7 @@ if (logined) return true
             val casNonce = casHtml.selectFirst("#lt")?.attr("value")
             require(casNonce != null && casEvent != null && casExecution != null) { "CAS Nonce is null" }
 
-            val casTicketResp = client.prepareForm("https://cas.jlu.edu.cn/tpass/login", formParameters = parameters {
+            val casTicketResp = client.prepareForm(CAS_URL, formParameters = parameters {
                 append("rsa", strEnc(username + password + casNonce, "1", "2", "3"))
                 append("ul", username.length.toString())
                 append("pl", password.length.toString())
@@ -78,13 +78,11 @@ if (logined) return true
                 ilearnGetNonceResp.bodyAsText().substring(14, ilearnGetNonceResp.bodyAsText().length - 4)
             )
 
-            client.get("https://ilearntec.jlu.edu.cn/coursecenter/main/index") {
+            client.get("https://ilearn.jlu.edu.cn/iplat/ssoservice") {
+                parameter("ssoservice", "https://ilearntec.jlu.edu.cn/")
                 parameter("ticket", ilearnCasReturn.String("ticket"))
             }
-            /**
-             * need this to refresh JSESSIONID
-             */
-            client.get("https://ilearnres.jlu.edu.cn/resource-center/user/index")
+            client.get("https://ilearntec.jlu.edu.cn/coursecenter/main/index")
             logined = true
             return true
         } catch (e: Exception) {

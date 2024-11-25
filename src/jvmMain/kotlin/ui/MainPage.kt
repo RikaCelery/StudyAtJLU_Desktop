@@ -6,6 +6,7 @@ import QUERY_LIVE_AND_RECORD
 import SettingPage
 import States
 import SyncState
+import TopBar
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,19 +25,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import cas.CasLogin
 import client
 import downloadVideo
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import logOut
-import TopBar
-import cas.CasLogin
-import io.ktor.client.statement.*
-import io.ktor.http.*
 import utils.*
 import java.awt.Desktop
 
@@ -183,8 +183,14 @@ suspend fun updateLessonList() {
         logOut("updateLessonList")
         val body = client.get("https://ilearntec.jlu.edu.cn/studycenter/platform/classroom/myClassroom") {
 //            header("Cookie", States.cookie)
-            parameter("termYear", States.currentTerm.substringAfter('-').substringBefore('-'))
-            parameter("term", States.currentTerm.substringAfterLast('-'))
+            parameter("termYear", States.currentTermName.substring(0, 4))
+            parameter("term", States.currentTermName.substringAfterLast('-').let {
+                when (it) {
+                    "第一学期" -> "1"
+                    "第二学期" -> "2"
+                    else -> throw IllegalStateException("Unknown term: ${States.currentTermName}")
+                }
+            })
         }.body<JsonObject>()
         logOut(body)
         body
@@ -238,7 +244,8 @@ fun MainPage() {
                         States.queryType = 0
                         States.queryVideos = listOf(
                             "termId" to States.currentTerm,
-                            "submitStatus" to "0",
+                            "roomType" to "0",
+                            "identity" to "0",
                             "teachClassId" to it.String("classroomId"),
                         )
                         States.currentJob?.cancel()
@@ -251,6 +258,7 @@ fun MainPage() {
                         States.termNow = (it.String("year") + it.String("name"))
                         States.lessonNow = "---"
                         States.currentTerm = it.String("id")
+                        States.currentTermName = (it.String("year") + '-' + it.String("name"))
                         States.queryVideos = listOf("termYear" to it.String("year"), "term" to it.String("num"))
                         States.currentJob?.cancel()
                         States.currentJob = mainScope.launch {
@@ -366,10 +374,10 @@ fun MainPage() {
                                                         try {
                                                             downloadVideo(folder, teacherFile, pcFile, id)
 
-                                                        }catch (e: Exception){
+                                                        } catch (e: Exception) {
                                                             e.printStackTrace()
                                                         }
-                                                        }
+                                                    }
                                                 }, modifier) {
                                                     Icon(painterResource("download.svg"), "download", modifier1)
                                                 }
@@ -390,9 +398,8 @@ fun MainPage() {
                                                 } else IconButton({
                                                     mainScope.launch {
                                                         try {
-
-                                                        downloadVideo(folder, teacherFile, pcFile, id, 1)
-                                                        }catch (e: Exception){
+                                                            downloadVideo(folder, teacherFile, pcFile, id, 1)
+                                                        } catch (e: Exception) {
                                                             e.printStackTrace()
                                                         }
                                                     }
@@ -505,6 +512,7 @@ private fun syncCourses(mainScope: CoroutineScope) {
                 Object("data").Array("dataList").first().let {
                     logOut(it)
                     States.currentTerm = it.String("id")
+                    States.currentTermName = it.String("year") + "-" + it.String("name")
                     States.termNow = it.String("year") + it.String("name")
                 }
             }

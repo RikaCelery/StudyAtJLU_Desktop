@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 object States {
     var currentTerm: String = ""
+    var currentTermName: String = "2024-第一学期"
     var videos = mutableStateListOf<JsonObject>()
     var syncState: SyncState by mutableStateOf(SyncState.OUT_DATE)
     var pageState by mutableStateOf(PageState.INDEX)

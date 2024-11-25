@@ -14,40 +14,40 @@ import java.io.FileOutputStream
 import kotlin.io.path.pathString
 
 suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourceId: String, type: Int = 0) {
-
-    val info = runCatching {
-        val result = client.get(QUERY_VIDEO_INFO) {
-            parameter("resourceId", resourceId)
-        }.body<JsonObject>()
-        assert(result.Boolean("success")) { "Failed to download video," + result.toString() }
-        result.Object("data")
-    }.onFailure {
-        it.printStackTrace()
-    }.getOrNull()
-    if (info == null) {
-        logOut("failed: $resourceId")
-        return
-    }
-
-    println(info)
-
     val htmlFile =
         folder.apply { if (exists().not()) mkdirs() }.resolve("index.html")
-
-    val videoInfos = info.Array("videoList")
-
-    val teacherVideoInfo = videoInfos.singleOrNull { it.String("videoName").contains("教师") }
-    val pcVideoInfo = videoInfos.singleOrNull { it.String("videoName").contains("HDMI") }
-    requireNotNull(teacherVideoInfo)
-    requireNotNull(pcVideoInfo)
-    val teacherUrl = Url(teacherVideoInfo.String("videoPath"))
-    val pcUrl = Url(pcVideoInfo.String("videoPath"))
-
+    client.get("https://ilearnres.jlu.edu.cn/resource-center/portal/loginRecord")// using pac4jCsrfToken refresh ilearnres.jlu.edu.cn JSESSIONID
+    val info by lazy {
+        try {
+            runBlocking {
+                val result = client.get(QUERY_VIDEO_INFO) {
+                    parameter("resourceId", resourceId)
+                }.body<JsonObject>()
+                require(result.Boolean("success")) {
+                    "Failed to download video," + result.toString()
+                }
+                result.Object("data")
+            }
+        } catch (e: Exception) {
+            logOut("failed: $resourceId,$e")
+            throw e
+        }
+    }
     supervisorScope {
         if (type == 0) {
             if (States.tasks.get(resourceId + "_1")?.isActive == true)
                 return@supervisorScope
             States.tasks[resourceId + "_1"] = launch {
+
+                val videoInfos = info.Array("videoList")
+
+                val teacherVideoInfo = videoInfos.singleOrNull { it.String("videoName").contains("教师") }
+                val pcVideoInfo = videoInfos.singleOrNull { it.String("videoName").contains("HDMI") }
+                requireNotNull(teacherVideoInfo)
+                requireNotNull(pcVideoInfo)
+                val teacherUrl = Url(teacherVideoInfo.String("videoPath"))
+                val pcUrl = Url(pcVideoInfo.String("videoPath"))
+
                 States.progress[resourceId + "_1"] = 0f
                 runCatching {
                     downloadToFile(teacherFile, teacherUrl) { current, total, totalTime, _, startBytes ->
@@ -76,6 +76,16 @@ suspend fun downloadVideo(folder: File, teacherFile: File, pcFile: File, resourc
             if (States.tasks.get(resourceId + "_2")?.isActive == true)
                 return@supervisorScope
             States.tasks[resourceId + "_2"] = launch {
+
+                val videoInfos = info.Array("videoList")
+
+                val teacherVideoInfo = videoInfos.singleOrNull { it.String("videoName").contains("教师") }
+                val pcVideoInfo = videoInfos.singleOrNull { it.String("videoName").contains("HDMI") }
+                requireNotNull(teacherVideoInfo)
+                requireNotNull(pcVideoInfo)
+                val teacherUrl = Url(teacherVideoInfo.String("videoPath"))
+                val pcUrl = Url(pcVideoInfo.String("videoPath"))
+
                 States.progress[resourceId + "_2"] = 0f
                 runCatching {
                     downloadToFile(pcFile, pcUrl) { current, total, totalTime, _, startBytes ->

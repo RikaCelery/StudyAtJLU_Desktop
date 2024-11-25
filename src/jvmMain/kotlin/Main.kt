@@ -12,8 +12,12 @@ import io.ktor.client.plugins.cookies.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.util.*
 import io.ktor.util.date.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.decodeFromString
@@ -28,19 +32,22 @@ import java.io.File
 import java.io.PrintStream
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.min
+
 object CCookiesStorage : CookiesStorage {
     fun exportToJsonString(): String {
         return Json.Default.encodeToString(
             container
         )
     }
-    fun loadFromJsonString(jsonString: String){
+
+    fun loadFromJsonString(jsonString: String) {
         try {
             container.addAll(Json.Default.decodeFromString(jsonString))
-        }catch (e: Exception){
+        } catch (e: Exception) {
             e.printStackTrace()
         }
     }
+
     private val container: MutableList<Cookie> = mutableListOf(
         Cookie(
             "decviceId",
@@ -58,7 +65,7 @@ object CCookiesStorage : CookiesStorage {
         if (date.timestamp >= oldestCookie.get()) cleanup(date.timestamp)
 
         return@withLock container.filter { it.matches(requestUrl) }.also {
-            println("get cookie: ${it.map { it.name + "=" + it.value }} for $requestUrl")
+            println("[COOKIE-GET]\n    get cookie: ${it.map { it.name + "=" + it.value }} for $requestUrl")
         }
     }
 
@@ -66,7 +73,8 @@ object CCookiesStorage : CookiesStorage {
         with(cookie) {
             if (name.isBlank()) return@withLock
         }
-        println(cookie.name + "=" + cookie.value + " for " + requestUrl)
+        println("[COOKIE-SET]\n" +
+                "    "+cookie.name + "=" + cookie.value + " for " + requestUrl)
         container.removeAll { it.name == cookie.name && it.matches(requestUrl) }
         container.add(cookie.fillDefaults(requestUrl))
         cookie.expires?.timestamp?.let { expires ->
@@ -95,13 +103,22 @@ object CCookiesStorage : CookiesStorage {
 
 val client = HttpClient(OkHttp) {
     install(Logging) {
-        logger = Logger.SIMPLE
+        logger = object : Logger {
+            val mutex = Mutex()
+            override fun log(message: String) {
+                GlobalScope.launch {
+                    mutex.withLock {
+                        println("[HTTP]\n" + message.lines().map { "    $it" }.joinToString("\n"))
+                    }
+                }
+            }
+        }
         level = LogLevel.INFO
     }
-    install(DefaultRequest){
+    install(DefaultRequest) {
         headers {
-            set("Accept","*/*")
-            set("Accept-Charset","*")
+            set("Accept", "*/*")
+            set("Accept-Charset", "*")
         }
     }
     install(ContentNegotiation) {
@@ -111,15 +128,16 @@ val client = HttpClient(OkHttp) {
             prettyPrint = true
         })
     }
-    install(HttpRedirect){
-        checkHttpMethod=false
-        allowHttpsDowngrade=true
+    install(HttpRedirect) {
+        checkHttpMethod = false
+        allowHttpsDowngrade = true
     }
-    install(HttpCookies){
+    install(HttpCookies) {
         storage = CCookiesStorage
     }
     install(UserAgent) {
-        agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+        agent =
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
     }
     install(ContentEncoding) {
         deflate(1.0F)
@@ -130,7 +148,7 @@ val client = HttpClient(OkHttp) {
         constantDelay(300, 2000)
     }
     install(HttpTimeout) {
-        socketTimeoutMillis  = Long.MAX_VALUE
+        socketTimeoutMillis = Long.MAX_VALUE
         connectTimeoutMillis = 15_000
     }
     engine {
@@ -141,6 +159,7 @@ val client = HttpClient(OkHttp) {
         }
     }
 }
+
 val logFile = File("log.txt")
 
 
@@ -173,7 +192,7 @@ fun main() {
 //    System.setErr(err)
 //    System.setErr(out)
     States.loadAll()
-    if(DB.getValue("cookie_store")!=null)
+    if (DB.getValue("cookie_store") != null)
         CCookiesStorage.loadFromJsonString(DB.getValue("cookie_store")!!)
     try {
         app()
