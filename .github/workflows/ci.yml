@@ -31,10 +31,10 @@ jobs:
     # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
-    - name: tree
-      run: tree .
     - name: Build with Gradle Wrapper
       run: chmod +x ./gradlew && ./gradlew packageDistributionForCurrentOS --info
+    - name: tree
+      run: tree .
     - name: Upload MSI
       uses: actions/upload-artifact@v4.4.3
       with:
