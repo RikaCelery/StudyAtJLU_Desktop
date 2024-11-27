@@ -12,9 +12,9 @@
 
 ## 使用
 
-参考[学在吉大视频下载器/H5播放器](https://github.com/RikaCelery/StudyAtJlu)获得cookie
+账号密码填入最上面的文本框，点击转圈圈的图标
 
-填入最上面的文本框，点击转圈圈的图标
+（目前发版有点问题，尽量用源码跑吧）
 
 ## TODO（画大饼/pr is welcome）
 
